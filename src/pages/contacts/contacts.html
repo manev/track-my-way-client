@@ -1,0 +1,56 @@
+<ion-toolbar primary class="bar bar-header bar-stable">
+  <button ion-button menuToggle left>
+        <ion-icon name="menu"></ion-icon>
+    </button>
+  <ion-title>Contacts</ion-title>
+  <ion-buttons start>
+    <button ion-button>
+            <ion-icon name="contact"></ion-icon>
+        </button>
+  </ion-buttons>
+  <ion-buttons end>
+    <button ion-button>
+            <ion-icon name="search"></ion-icon>
+        </button>
+  </ion-buttons>
+</ion-toolbar>
+
+<ion-content>
+  <ion-searchbar *ngIf="false"></ion-searchbar>
+  <div class="root">
+    <div class="contacts" *ngIf="hasContacts === null">
+      <p>
+        Loading contacts ...
+      </p>
+      <p>
+        <ion-spinner name="ios"></ion-spinner>
+      </p>
+    </div>
+
+    <div class="contacts" *ngIf="hasContacts === false">
+      No contacts found.
+    </div>
+
+    <ion-list>
+      <ion-item *ngFor="let contact of contacts">
+        <ion-row>
+          <ion-col>
+            <div class="top-padding">
+              {{ contact.FirstName }}
+            </div>
+          </ion-col>
+          <ion-col>
+            <div>
+              <button ion-button [disabled]="!contact.IsOnline" small outline class="button button-positive button-width130" (click)="openActionSheet(contact)">
+                  <span *ngIf="contact.IsOnline">start &nbsp;&nbsp;&nbsp;&nbsp;</span>
+                  <span *ngIf="!contact.IsOnline">user is offline</span>
+                  <ion-icon name="expand" *ngIf="contact.IsOnline"></ion-icon>
+              </button>
+              <button ion-button outline small class="button button-outline button-positive" (click)="onPush(contact)">Poke</button>
+            </div>
+          </ion-col>
+        </ion-row>
+      </ion-item>
+    </ion-list>
+  </div>
+</ion-content>

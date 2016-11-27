@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "826251723660",
+    "firebase_url": "https://trackmyway-e2021.firebaseio.com",
+    "project_id": "trackmyway-e2021",
+    "storage_bucket": "trackmyway-e2021.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:826251723660:android:8e078b3d9ae9e76a",
+        "android_client_info": {
+          "package_name": "com.manev.TrackMyWay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "826251723660-59qeln5vlosbcudnfu12lbmm0k0qp3b5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARNJAJNrOjQkGg6DcjVGAMYtKqigIXJIQ"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

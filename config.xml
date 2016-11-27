@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<widget id="com.manev.TrackMyWay" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+  <name>TrackMyWay</name>
+  <description/>
+  <author email="kokomanev84@gmail.com" href="http://ionicframework.com/">Ko</author>
+  <content src="index.html"/>
+  <access origin="*"/>
+  <allow-intent href="http://*/*"/>
+  <allow-intent href="https://*/*"/>
+  <allow-intent href="tel:*"/>
+  <allow-intent href="sms:*"/>
+  <allow-intent href="mailto:*"/>
+  <allow-intent href="geo:*"/>
+  <platform name="android">
+    <allow-intent href="market:*"/>
+    <allow-navigation href="*"/>
+  </platform>
+  <platform name="ios">
+    <allow-intent href="itms:*"/>
+    <allow-intent href="itms-apps:*"/>
+  </platform>
+  <preference name="loadUrlTimeoutValue" value="700000"/>
+  <preference name="webviewbounce" value="false"/>
+  <preference name="UIWebViewBounce" value="false"/>
+  <preference name="DisallowOverscroll" value="true"/>
+  <preference name="android-minSdkVersion" value="16"/>
+  <preference name="BackupWebStorage" value="none"/>
+  <preference name="SplashScreenDelay" value="2000"/>
+  <preference name="FadeSplashScreenDuration" value="2000"/>
+  <preference name="xwalkVersion" value="18+"/>
+  <preference name="xwalkCommandLine" value="--disable-pull-to-refresh-effect"/>
+  <preference name="xwalkMode" value="embedded"/>
+  <preference name="xwalkMultipleApk" value="true"/>
+  <feature name="StatusBar">
+    <param name="ios-package" onload="true" value="CDVStatusBar"/>
+  </feature>
+  <plugin name="com.googlemaps.ios" version="1.10.4"/>
+  <plugin name="cordova-plugin-contacts" version="2.1.0"/>
+  <plugin name="cordova-plugin-geolocation" version="1.0.1"/>
+  <plugin name="cordova-plugin-globalization" version="1.0.2"/>
+  <plugin name="cordova-plugin-network-information" version="1.1.0"/>
+  <plugin name="cordova-plugin-dialogs" version="1.2.0"/>
+  <plugin name="cordova-plugin-background-mode" src="https://github.com/katzer/cordova-plugin-background-mode.git" version="0.6.5"/>
+  <plugin name="de.appplant.cordova.plugin.local-notification" src="https://github.com/katzer/cordova-plugin-local-notifications.git" version="0.8.4"/>
+  <plugin name="cordova.plugins.diagnostic" spec="3.1.2"/>
+  <plugin name="ionic-plugin-keyboard" spec="~2.2.1"/>
+  <plugin name="cordova-sqlite-storage" spec="~1.4.5"/>
+  <plugin name="cordova-plugin-whitelist" spec="~1.2.2"/>
+  <plugin name="cordova-plugin-console" spec="~1.0.3"/>
+  <plugin name="cordova-plugin-device" spec="~1.1.2"/>
+  <plugin name="cordova-plugin-splashscreen" spec="~3.2.2"/>
+  <plugin name="cordova-plugin-statusbar" spec="~2.1.3"/>
+</widget>

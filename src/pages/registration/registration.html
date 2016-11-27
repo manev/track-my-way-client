@@ -1,0 +1,55 @@
+<ion-header>
+	<ion-toolbar color="primary">
+		<ion-title>Register your phone number</ion-title>
+	</ion-toolbar>
+</ion-header>
+
+<ion-content>
+	<form class="regForm" #f="ngForm" (ngSubmit)="register()">
+		<ion-row>
+			<ion-col>
+				<ion-item>
+					<ion-input type="text" placeholder="Name" autofocus [(ngModel)]="user.FirstName" name="firstName" clearInput required>
+					</ion-input>
+				</ion-item>
+			</ion-col>
+		</ion-row>
+
+		<ion-row>
+			<ion-col>
+				<div class="row item-note">
+					Enter you phone number
+				</div>
+			</ion-col>
+		</ion-row>
+
+		<ion-row>
+			<ion-col width-25>
+				<select [(ngModel)]="user.CountryCode" name="countryCode" class="select">
+              <option *ngFor="let c of countriesInfo"
+                            [value]="c.alpha2"
+                            [selected]="c.alpha2 === countryCode" #combo>
+                        <span *ngIf="!combo.selected">
+                          {{c.name}}
+                        </span>
+                        {{c.countryCallingCodes[0]}}
+              </option>
+        </select>
+			</ion-col>
+
+			<ion-col>
+				<ion-item class="number-text">
+					<ion-input type="number" placeholder="Without country code" name="phoneNumber" [(ngModel)]="user.Phone.Number" required>
+					</ion-input>
+				</ion-item>
+			</ion-col>
+
+		</ion-row>
+
+		<ion-row>
+			<button ion-button class="button button-large button-full" type="submit" [disabled]="!f.form.valid">
+        <span>Register</span>
+      </button>
+		</ion-row>
+	</form>
+</ion-content>

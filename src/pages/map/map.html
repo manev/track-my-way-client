@@ -1,0 +1,14 @@
+<ion-content>
+  <div class="root" *ngIf="isResponseWaiting">
+    <div class="contacts">
+      <p>
+        Waiting for response ...
+      </p>
+      <p>
+        <ion-spinner name="ios"></ion-spinner>
+      </p>
+    </div>
+  </div>
+
+  <div style="width:100%; height:100%; margin: 0px; top: 0; left: 0; position: relative" #mapHost></div>
+</ion-content>

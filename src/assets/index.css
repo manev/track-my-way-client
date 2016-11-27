@@ -1,0 +1,81 @@
+﻿.contacts {
+    margin-top: 100px;
+    text-align: center;
+    font-size: large;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+}
+
+#spinner {
+    text-align: center;
+}
+
+.root {
+    padding: 50px 0 0 0;
+    z-index: 1000;
+}
+
+.spinner svg {
+    width: 19% !important;
+    height: 85px !important;
+}
+
+ion-nav {
+    position: relative !important;
+}
+
+#map {
+    position: absolute !important;
+    top: 50%;
+    left: 50%;
+    width: 500px;
+    height: 500px;
+}
+
+.regForm {
+    margin-top: 60px;
+}
+
+select {
+    height: 46px;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+input {
+    width: 250px;
+    width: 100%;
+    font-size: 25px;
+}
+
+.submit {
+    height: 35px;
+    font-size: 25px;
+    width: 100%;
+}
+
+.top-padding {
+    margin-top: 10px;
+}
+
+.button-register {
+    background: #9D9FA0 !important;
+}
+
+.button-width130 {
+    width: 130px !important;
+    border-radius: 0 !important;
+}
+
+.select {
+    cursor:pointer;
+    display:inline-block;
+    position:relative;
+    background: transparent;
+    border: none;
+    margin-top: 10px;
+}
+
+.number-text {
+    margin-bottom: 5px !important;
+}
