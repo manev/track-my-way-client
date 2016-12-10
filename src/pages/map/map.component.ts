@@ -1,13 +1,9 @@
 import { OnInit, Component, ViewChild } from "@angular/core";
-import {
-  NavController,
-  NavParams,
-  ViewController,
-  Platform
-} from 'ionic-angular';
+import { NavController, NavParams, ViewController, Platform } from 'ionic-angular';
 import { Geolocation } from 'ionic-native';
 
 import { ServerHostManager } from "../../services/serverHostManager";
+import { ContactsComponent } from "./../contacts/contacts.component";
 
 declare var plugin: any;
 declare var navigator: any;
@@ -16,7 +12,9 @@ declare var navigator: any;
 export class MapComponent implements OnInit {
   private contact;
   private map;
-  isResponseWaiting = true;
+  private isResponseWaiting = true;
+  private watchPositionHandler;
+  private backButtonHandler;
 
   @ViewChild("mapHost") mapHost;
 
@@ -38,11 +36,11 @@ export class MapComponent implements OnInit {
       }, "", "Back to contacts");
     });
     this.loadGoogleMap();
+    this.configBackButton();
   }
 
   ngOnDestroy() {
-    if (this.map)
-      this.map.remove();
+    this.dispose();
   }
 
   private loadGoogleMap() {
@@ -74,18 +72,13 @@ export class MapComponent implements OnInit {
       this.map.refreshLayout();
     });
 
-    Geolocation.watchPosition({ timeout: 3000, enableHighAccuracy: true }).subscribe(result => {
-      if (result.message)
-        alert(result.message);
-      else
-        this.positionChanged(result.coords.latitude, result.coords.longitude);
-    });
-
-    let backgroundOptions = {
-      desiredAccuracy: 10,
-      stationaryRadius: 20,
-      distanceFilter: 30
-    };
+    this.watchPositionHandler = Geolocation.watchPosition({ timeout: 15000, enableHighAccuracy: true })
+      .subscribe(result => {
+        if (result.coords)
+          this.positionChanged(result.coords.latitude, result.coords.longitude);
+        else
+          alert("There was a problem retrieving your Geolocation. Try to restart your location service.");
+      });
 
     this.serverHost.onPositionRecieved(position => {
       if (!isLoaded) {
@@ -121,5 +114,25 @@ export class MapComponent implements OnInit {
   private positionChanged(latitude, longitude) {
     let payload = { Geopoint: { Position: { Latitude: latitude, Longitude: longitude } } };
     this.serverHost.sendPosition([this.contact], payload);
+  }
+
+  private configBackButton() {
+    this.backButtonHandler = this.platform.registerBackButtonAction(() => {
+      this.nav.setRoot(ContactsComponent);
+      this.dispose();
+    }, 101);
+  }
+
+  private dispose() {
+    if (this.map)
+      this.map.remove();
+
+    if (this.watchPositionHandler)
+      this.watchPositionHandler.unsubscribe();
+
+    this.backButtonHandler();
+
+    this.serverHost.disconnectPositionRecieved();
+    this.serverHost.stopTracking();
   }
 }

@@ -1,0 +1,17 @@
+<ion-menu [content]="navHost">
+  <ion-header>
+    <ion-toolbar primary class="bar bar-header bar-stable">
+      <ion-title>Menu</ion-title>
+    </ion-toolbar>
+  </ion-header>
+  <ion-content>
+    <ion-list>
+      <!--<button (click)="onEnableBackgroundMode()" ion-item>Enable run in background</button>
+      <button (click)="onDisableBackgroundMode()" ion-item>Disable run in background</button>-->
+      <button (click)="onReconnect()" ion-item>Reconnect</button>
+      <button (click)="onMenuClose()" ion-item>Close Menu</button>
+    </ion-list>
+  </ion-content>
+</ion-menu>
+
+<ion-nav #navHost></ion-nav>

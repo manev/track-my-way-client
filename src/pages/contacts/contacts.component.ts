@@ -30,12 +30,21 @@ export class ContactsComponent implements OnInit {
   ngOnInit() {
     this.serverHost.onTrackingRequest(this.onTrackingRequest.bind(this));
 
-    if (Device.device.serial === "320496b4274211a1")
+    if (Device.serial === "320496b4274211a1")
       this.setupMockUser();
     else
       this.loadContacts();
 
     this.setupPushNotification();
+
+    this.serverHost.onUserDisconnect((user: User) => {
+      this.contacts.forEach(contact => {
+        if (contact.Phone.Number === user.Phone.Number) {
+          contact.IsOnline = false;
+          return;
+        }
+      });
+    });
   }
 
   openActionSheet(contact) {
@@ -210,9 +219,6 @@ export class ContactsComponent implements OnInit {
               }
             });
         }
-        this.ngZone.run(() => {
-
-        });
         this.contacts = _contacts;
         this.hasContacts = this.contacts.length > 0;
         this.serverHost.emitLoginUser();

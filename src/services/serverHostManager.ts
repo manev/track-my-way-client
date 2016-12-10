@@ -41,6 +41,14 @@ export class ServerHostManager {
     this.emit("loggin-user-event", user);
   }
 
+  ping(callback) {
+    this.on("ping-back", data => {
+       let res = JSON.parse(data);
+       callback(res);
+    });
+    this.emit("ping");
+  }
+
   getAllRegisteredUsers(): Observable<Array<User>> {
     if (!this.usersObservable) {
       let _observer: Observer<Array<User>>;
@@ -96,6 +104,10 @@ export class ServerHostManager {
     });
   }
 
+  disconnectPositionRecieved() {
+    this.socket.off("send-position-event");
+  }
+
   sendPosition(receivers, position) {
     receivers.forEach(r => {
       this.socket.emit("send-position-event", JSON.stringify(r), JSON.stringify(position));
@@ -108,12 +120,16 @@ export class ServerHostManager {
     });
   }
 
-  emitDisconnect() {
+  stopTracking() {
     let user = this.settings.getUser();
     this.emit("stop-user-tracking", user);
   }
 
-  onUserDisconnect(callback) {
+  disconnect() {
+    this.emit("disconnect");
+  }
+
+  onUserDisconnect(callback: Function) {
     this.on("disonnect-user", user => {
       callback(JSON.parse(user));
     });

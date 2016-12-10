@@ -1,29 +1,19 @@
 import { Platform, AlertController, MenuController, Alert } from 'ionic-angular';
-import { StatusBar, Device, BackgroundGeolocation, Insomnia, Splashscreen } from 'ionic-native';
+import { Diagnostic, StatusBar, Device, BackgroundGeolocation, Insomnia, Splashscreen } from 'ionic-native';
 import { ViewChild, Component } from "@angular/core";
 
 import { localDeviceSettings } from "../services/localDeviceSettings";
 import { RegistrationComponent } from "../pages/registration/register.component";
 import { ContactsComponent } from "../pages/contacts/contacts.component";
+import { ServerHostManager } from "../services/serverHostManager";
 
 declare var navigator: any;
 
 @Component({
-  template: `
-            <ion-menu [content]="mycontent">
-                <ion-toolbar primary class="bar bar-header bar-stable"><ion-title>Menu</ion-title></ion-toolbar>
-                <ion-content>
-                    <ion-list>
-                         <button (click)="onEnableBackgroundMode()" ion-item detail-none>Enable run in background</button>
-                         <button (click)="onDisableBackgroundMode()" ion-item detail-none>Disable run in background</button>
-                         <button (click)="onMenuClose()" ion-item><ion-icon name="close"></ion-icon> Close</button>
-                    </ion-list>
-                </ion-content>
-            </ion-menu>
-            <ion-nav #mycontent></ion-nav>`
+  templateUrl: "./app.component.html"
 })
 export class MyApp {
-  @ViewChild("mycontent") nav;
+  @ViewChild("navHost") nav;
 
   private alertLocation: Alert;
 
@@ -31,6 +21,7 @@ export class MyApp {
     private platform: Platform,
     private localSettings: localDeviceSettings,
     private menu: MenuController,
+    private serverHost: ServerHostManager,
     private alertController: AlertController) {
 
     platform.ready().then(() => {
@@ -42,18 +33,28 @@ export class MyApp {
       this.configLocationService();
       this.configResume();
       this.configBackButton();
-      // this.bootstrapp();
     });
   }
 
   private configBackButton() {
-    this.platform.backButton.subscribe(() => {
-      if (this.nav.length() === 0)
-        this.platform.exitApp();
-
-      if (this.nav.getActive().componentType === ContactsComponent) {
-      }
-    });
+    this.platform.registerBackButtonAction(() => {
+      const alert = this.alertController.create({
+        title: "Exit",
+        subTitle: "Are you sure you want to exit?",
+        buttons: [{
+          text: "Ok",
+          handler: () => this.platform.exitApp()
+        },
+        {
+          text: "Cancel",
+          handler: () => {
+            alert.dismiss();
+            this.serverHost.disconnect();
+          }
+        }],
+      });
+      alert.present();
+    }, 100);
   }
 
   private configResume() {
@@ -79,7 +80,7 @@ export class MyApp {
   }
 
   private bootstrapp() {
-    if (Device.device.serial === "320496b4274211a1") {
+    if (Device.serial === "320496b4274211a1") {
       this.localSettings.setMockedUser();
     }
     else if (this.localSettings.isNewVersionAvailable()) {
@@ -106,6 +107,10 @@ export class MyApp {
   }
 
   private configLocationService() {
+    Diagnostic.requestLocationAuthorization().then(result => {
+      console.log(result);
+    });
+
     BackgroundGeolocation.isLocationEnabled()
       .then(value => {
         if (value === 0) {
@@ -135,16 +140,24 @@ export class MyApp {
       .catch(error => alert(`BackgroundGeolocation.isLocationEnabled error: ${error}`));
   }
 
-  public onEnableBackgroundMode() {
+  onEnableBackgroundMode() {
     //BackgroundMode.enable();
     this.menu.close();
   }
 
-  public onDisableBackgroundMode() {
+  onDisableBackgroundMode() {
     this.menu.close();
   }
 
-  public onMenuClose() {
+  onMenuClose() {
+    this.menu.close();
+  }
+
+  onReconnect() {
+    this.serverHost.emitLoginUser();
+    this.serverHost.ping(data => {
+      debugger;
+    });
     this.menu.close();
   }
 }
