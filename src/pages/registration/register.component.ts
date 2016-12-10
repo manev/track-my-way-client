@@ -1,6 +1,6 @@
-import { OnInit, Component } from "@angular/core";
-
+import { OnInit, Component, ViewChild } from "@angular/core";
 import { NavController } from 'ionic-angular';
+import { Keyboard } from "ionic-native";
 
 import { ServerHostManager } from "../../services/serverHostManager";
 import { localDeviceSettings } from "../../services/localDeviceSettings";
@@ -12,6 +12,8 @@ declare var navigator: any;
 
 @Component({ templateUrl: "registration.html" })
 export class RegistrationComponent implements OnInit {
+
+  @ViewChild("name") nameInput;
 
   constructor(
     private serverHost: ServerHostManager,
@@ -29,6 +31,13 @@ export class RegistrationComponent implements OnInit {
     } else {
       this.user.CountryCode = "bg"
     }
+  }
+
+  ionViewDidEnter() {
+    setTimeout(() => {
+      this.nameInput.setFocus();
+      Keyboard.show();
+    }, 150);
   }
 
   register() {

@@ -15,6 +15,7 @@ export class MapComponent implements OnInit {
   private isResponseWaiting = true;
   private watchPositionHandler;
   private backButtonHandler;
+  private isDisposed = false;
 
   @ViewChild("mapHost") mapHost;
 
@@ -32,7 +33,8 @@ export class MapComponent implements OnInit {
     this.serverHost.onStopUserTrackRecieved(user => {
       var message = user.FirstName + " has been disconnected.";
       navigator.notification.alert(message, () => {
-        this.viewCtrl.dismiss({});
+        this.dispose();
+        this.nav.setRoot(ContactsComponent);
       }, "", "Back to contacts");
     });
     this.loadGoogleMap();
@@ -118,12 +120,20 @@ export class MapComponent implements OnInit {
 
   private configBackButton() {
     this.backButtonHandler = this.platform.registerBackButtonAction(() => {
-      this.nav.setRoot(ContactsComponent);
-      this.dispose();
+      navigator.notification.confirm("Are you sure you want to stop the session?", () => {
+        this.dispose();
+        this.nav.setRoot(ContactsComponent);
+      }, "Cancel", "Back to contacts");
     }, 101);
   }
 
   private dispose() {
+    if (this.isDisposed)
+      return;
+
+    this.isDisposed = true;
+    this.serverHost.removeStopUserTrackRecieved();
+
     if (this.map)
       this.map.remove();
 
@@ -133,6 +143,6 @@ export class MapComponent implements OnInit {
     this.backButtonHandler();
 
     this.serverHost.disconnectPositionRecieved();
-    this.serverHost.stopTracking();
+    this.serverHost.stopTracking(this.contact);
   }
 }

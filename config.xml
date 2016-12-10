@@ -19,6 +19,7 @@
     <allow-intent href="itms:*"/>
     <allow-intent href="itms-apps:*"/>
   </platform>
+  <preference name="KeyboardDisplayRequiresUserAction" value="false"/>
   <preference name="loadUrlTimeoutValue" value="700000"/>
   <preference name="webviewbounce" value="false"/>
   <preference name="UIWebViewBounce" value="false"/>

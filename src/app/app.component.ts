@@ -1,4 +1,4 @@
-import { Platform, AlertController, MenuController, Alert } from 'ionic-angular';
+import { Platform, AlertController, MenuController, Alert, LoadingController } from 'ionic-angular';
 import { Diagnostic, StatusBar, Device, BackgroundGeolocation, Insomnia, Splashscreen } from 'ionic-native';
 import { ViewChild, Component } from "@angular/core";
 
@@ -22,6 +22,7 @@ export class MyApp {
     private localSettings: localDeviceSettings,
     private menu: MenuController,
     private serverHost: ServerHostManager,
+    private loading: LoadingController,
     private alertController: AlertController) {
 
     platform.ready().then(() => {
@@ -33,6 +34,7 @@ export class MyApp {
       this.configLocationService();
       this.configResume();
       this.configBackButton();
+      this.attachLogListener();
     });
   }
 
@@ -63,7 +65,6 @@ export class MyApp {
         BackgroundGeolocation.isLocationEnabled()
           .then(value => {
             if (value) {
-              this.alertLocation = null;
               this.alertLocation.dismiss();
             } else {
               this.platform.exitApp();
@@ -89,10 +90,10 @@ export class MyApp {
 
     const user = this.localSettings.getUser();
     if (!user) {
-      this.nav.setRoot(RegistrationComponent);
+      this.nav.push(RegistrationComponent);
       this.localSettings.updateCurrentVersion();
     } else {
-      this.nav.setRoot(ContactsComponent);
+      this.nav.push(ContactsComponent);
     }
   }
 
@@ -104,6 +105,10 @@ export class MyApp {
         "",
         "Exit");
     }
+  }
+
+  private attachLogListener() {
+    this.serverHost.addLogListener(message => alert(message));
   }
 
   private configLocationService() {
@@ -154,10 +159,15 @@ export class MyApp {
   }
 
   onReconnect() {
-    this.serverHost.emitLoginUser();
-    this.serverHost.ping(data => {
-      debugger;
+    const loading = this.loading.create({
+      content: "Connecting to server..."
     });
+    loading.present();
+
+    this.serverHost.emitLoginUser();
+    this.serverHost.addPingListener(data => loading.dismiss());
+
+    this.serverHost.sendPing();
     this.menu.close();
   }
 }

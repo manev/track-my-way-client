@@ -23,7 +23,7 @@
         Loading contacts ...
       </p>
       <p>
-        <ion-spinner name="ios"></ion-spinner>
+        <ion-spinner name="bubbles"></ion-spinner>
       </p>
     </div>
 
@@ -43,7 +43,7 @@
             <div>
               <button ion-button [disabled]="!contact.IsOnline" small outline class="button button-positive button-width130" (click)="openActionSheet(contact)">
                   <span *ngIf="contact.IsOnline">start &nbsp;&nbsp;&nbsp;&nbsp;</span>
-                  <span *ngIf="!contact.IsOnline">user is offline</span>
+                  <span *ngIf="!contact.IsOnline">offline</span>
                   <ion-icon name="expand" *ngIf="contact.IsOnline"></ion-icon>
               </button>
               <button ion-button outline small class="button button-outline button-positive" (click)="onPush(contact)">Poke</button>
@@ -52,5 +52,6 @@
         </ion-row>
       </ion-item>
     </ion-list>
+
   </div>
 </ion-content>

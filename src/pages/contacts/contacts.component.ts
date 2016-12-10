@@ -28,7 +28,7 @@ export class ContactsComponent implements OnInit {
   private isInSession = false;
 
   ngOnInit() {
-    this.serverHost.onTrackingRequest(this.onTrackingRequest.bind(this));
+    this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
 
     if (Device.serial === "320496b4274211a1")
       this.setupMockUser();
@@ -48,7 +48,7 @@ export class ContactsComponent implements OnInit {
   }
 
   openActionSheet(contact) {
-    let actionSheet = this.actionSheet.create({
+    const actionSheet = this.actionSheet.create({
       cssClass: 'action-sheets-basic-page',
       buttons: [
         {
@@ -65,6 +65,7 @@ export class ContactsComponent implements OnInit {
           text: "Start chat"
         },
         {
+          role: "cancel",
           text: "Cancel",
           icon: "close"
         }
@@ -75,59 +76,31 @@ export class ContactsComponent implements OnInit {
 
   startTracking(contact) {
     if (!contact.IsOnline) {
-      let prompt = this.alert.create({ title: "Warning!", subTitle: "User is offline", buttons: ['OK'] });
+      const prompt = this.alert.create({ title: "Warning!", subTitle: "User is offline", buttons: ['OK'] });
       prompt.present();
       return;
     }
 
-    let waitSpinner = this.loadingController.create({
+    const waitSpinner = this.loadingController.create({
       showBackdrop: true,
       spinner: "ios",
       content: "Waiting for contact response..."
     });
+    waitSpinner.present();
 
-    this.serverHost.onRequestTrackingResult(requestResult => {
+    this.serverHost.trackingResponse(requestResult => {
       waitSpinner.dismiss();
 
       if (requestResult.IsAccepted) {
+        this.serverHost.removeTrackingListener();
         this.nav.setRoot(MapComponent, { contact: contact });
       } else {
-        let prompt = this.alert.create({ title: "Warning!", subTitle: "User refused to track you!", buttons: ['OK'] });
+        const prompt = this.alert.create({ title: "Warning!", subTitle: "User refused to track you!", buttons: ['OK'] });
         prompt.present();
       }
-      this.serverHost.offRequestTrackingResult();
+      this.serverHost.stopRequestTracking();
     });
     this.serverHost.requestTracking(contact);
-
-    waitSpinner.present();
-  }
-
-  onTrackingRequest(sender) {
-    if (this.isInSession) return;
-
-    this.isInSession = true;
-
-    let that = this;
-    let user = <User>JSON.parse(sender);
-    let prompt = this.alert.create({
-      title: "Tracking request recieved",
-      message: user.FirstName + " wants to track your location",
-      buttons: [{
-        text: 'Cancel',
-        handler: data => {
-          that.serverHost.requestTrackingResponse(user, false);
-          that.isInSession = false;
-          prompt.dismiss();
-        }
-      }, {
-        text: 'OK',
-        handler: data => {
-          that.serverHost.requestTrackingResponse(user, true);
-          this.nav.setRoot(MapComponent, { contact: user });
-        }
-      }]
-    });
-    prompt.present();
   }
 
   onContactsLoaded(deviceContacts: any[]) {
@@ -160,6 +133,35 @@ export class ContactsComponent implements OnInit {
 
   onPush(contact) {
     this.serverHost.push(contact);
+  }
+
+  private onTrackingRequestRecieved(sender) {
+    if (this.isInSession) return;
+
+    this.isInSession = true;
+
+    let that = this;
+    let user = <User>JSON.parse(sender);
+    const prompt = this.alert.create({
+      title: "Request recieved",
+      message: `${user.FirstName} wants to share location`,
+      buttons: [{
+        text: 'Cancel',
+        handler: data => {
+          that.serverHost.sendTrackingResponse(user, false);
+          that.isInSession = false;
+          prompt.dismiss();
+        }
+      }, {
+        text: 'OK',
+        handler: data => {
+          that.serverHost.sendTrackingResponse(user, true);
+          this.nav.push(MapComponent, { contact: user });
+          //this.nav.setRoot(MapComponent, { contact: user });
+        }
+      }]
+    });
+    prompt.present();
   }
 
   private setupPushNotification() {
@@ -221,6 +223,7 @@ export class ContactsComponent implements OnInit {
         }
         this.contacts = _contacts;
         this.hasContacts = this.contacts.length > 0;
+
         this.serverHost.emitLoginUser();
         this.serverHost.getAllRegisteredUsers().subscribe(users => {
           users.forEach(user =>

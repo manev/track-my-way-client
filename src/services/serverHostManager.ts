@@ -10,50 +10,41 @@ declare var io: any;
 
 @Injectable()
 export class ServerHostManager {
-
-  constructor(private settings: localDeviceSettings) { }
-
   private live_url: string = 'http://whereru-kokata.rhcloud.com:8000';
-  //private live_url = "ws://192.168.1.147:3001";
+  //private live_url = "ws://192.168.1.121:8081";
+
   private socket = io(this.live_url, { reconnection: true });
   private usersObservable: Observable<Array<User>>;
 
-  private ensureSocketConnection() {
-    if (this.socket.connected === false)
-      this.socket = this.socket.connect();
-  }
-
-  private on(event, callback) {
-    this.ensureSocketConnection();
-    this.socket.on(event, callback);
-  }
-
-  private emit(event, payload = {}) {
-    this.ensureSocketConnection();
-    if (payload)
-      this.socket.emit(event, typeof payload === "object" ? JSON.stringify(payload) : payload);
-    else
-      this.socket.emit(event);
-  }
+  constructor(private settings: localDeviceSettings) { }
 
   emitLoginUser() {
     let user = this.settings.getUser();
     this.emit("loggin-user-event", user);
   }
 
-  ping(callback) {
+  addPingListener(callback: Function) {
     this.on("ping-back", data => {
-       let res = JSON.parse(data);
-       callback(res);
+      const res = JSON.parse(data);
+      callback(res);
     });
-    this.emit("ping");
+  }
+
+  sendPing() {
+    this.emit("ping-me");
+  }
+
+  addLogListener(callback: Function) {
+    this.on("log", message => {
+      callback(message);
+    });
   }
 
   getAllRegisteredUsers(): Observable<Array<User>> {
     if (!this.usersObservable) {
       let _observer: Observer<Array<User>>;
       this.on("get-all-registered-users-event", data => {
-        let users = <Array<User>>JSON.parse(data);
+        const users = <Array<User>>JSON.parse(data);
         _observer.next(users);
       });
       this.usersObservable = new Observable<Array<User>>(observer => _observer = observer).share();
@@ -62,17 +53,23 @@ export class ServerHostManager {
   }
 
   registerUser() {
-    let user = this.settings.getUser();
+    const user = this.settings.getUser();
     this.emit("add-user-event", user);
   }
 
-  onTrackingRequest(callback) {
-    let currentUser = this.settings.getUser();
-    let requestUserEvent = currentUser.Phone.Number + "-request-user-event";
+  addTrackingListener(callback) {
+    const currentUser = this.settings.getUser();
+    const requestUserEvent = currentUser.Phone.Number + "-request-user-event";
     this.on(requestUserEvent, callback);
   }
 
-  onRequestTrackingResult(callback) {
+  removeTrackingListener() {
+    const currentUser = this.settings.getUser();
+    const requestUserEvent = currentUser.Phone.Number + "-request-user-event";
+    this.socket.off(requestUserEvent);
+  }
+
+  trackingResponse(callback) {
     this.on("request-user-event-result", result => {
       if (result == null) return;
       let res = JSON.parse(result);
@@ -80,12 +77,11 @@ export class ServerHostManager {
     });
   }
 
-  offRequestTrackingResult() {
-    this.ensureSocketConnection();
+  stopRequestTracking() {
     this.socket.off("request-user-event-result");
   }
 
-  requestTrackingResponse(sender, isAccepted) {
+  sendTrackingResponse(sender, isAccepted) {
     this.emit("request-user-track-result",
       JSON.stringify({
         SenderUser: sender,
@@ -120,8 +116,11 @@ export class ServerHostManager {
     });
   }
 
-  stopTracking() {
-    let user = this.settings.getUser();
+  removeStopUserTrackRecieved() {
+    this.socket.off("stop-user-tracking");
+  }
+
+  stopTracking(user) {
     this.emit("stop-user-tracking", user);
   }
 
@@ -142,5 +141,23 @@ export class ServerHostManager {
 
   push(contact) {
     this.emit("sender-user-push", JSON.stringify(contact));
+  }
+
+  private ensureSocketConnection() {
+    if (this.socket.connected === false)
+      this.socket = this.socket.connect();
+  }
+
+  private on(event, callback) {
+    this.ensureSocketConnection();
+    this.socket.on(event, callback);
+  }
+
+  private emit(event, payload = null) {
+    this.ensureSocketConnection();
+    if (payload)
+      this.socket.emit(event, typeof payload === "object" ? JSON.stringify(payload) : payload);
+    else
+      this.socket.emit(event);
   }
 }
