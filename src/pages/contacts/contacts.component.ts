@@ -1,4 +1,5 @@
 import { OnInit, NgZone, Component } from "@angular/core";
+import { DomSanitizer } from '@angular/platform-browser';
 import { NavController, AlertController, LoadingController, ActionSheetController } from 'ionic-angular';
 import { Contacts, Device } from "ionic-native";
 
@@ -9,6 +10,8 @@ import { User, Tel } from "../../services/user";
 import { MapComponent } from "../map/map.component";
 
 declare let navigator: any;
+declare let cordova: any;
+declare let resolveLocalFileSystemURI;
 
 @Component({ templateUrl: "contacts.html" })
 export class ContactsComponent implements OnInit {
@@ -17,6 +20,7 @@ export class ContactsComponent implements OnInit {
     private settings: localDeviceSettings,
     private nav: NavController,
     private ngZone: NgZone,
+    private domSanitizer: DomSanitizer,
     private loadingController: LoadingController,
     private actionSheet: ActionSheetController,
     private alert: AlertController) {
@@ -28,6 +32,19 @@ export class ContactsComponent implements OnInit {
   private isInSession = false;
 
   ngOnInit() {
+
+    //window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, onFileSystemSuccess, fail);
+    // resolveLocalFileSystemURI("content://com.android.contacts/contacts/9/photo", args => {
+    //   debugger;
+    //   args.file(ar => {
+    //     debugger;
+    //   }, e => {
+    //     debugger;
+    //   });
+    // }, err => {
+    //   debugger;
+    // });
+
     this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
 
     if (Device.serial === "320496b4274211a1")
@@ -103,34 +120,6 @@ export class ContactsComponent implements OnInit {
     this.serverHost.requestTracking(contact);
   }
 
-  onContactsLoaded(deviceContacts: any[]) {
-    const that = this;
-    this.serverHost.getAllRegisteredUsers().subscribe((users: any) => {
-      this.ngZone.run(() => {
-        this.contacts = [];
-        const currentUser = this.settings.getUser();
-        const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number);
-        const country = Util.GetCountryByCode(currentUser.CountryCode);
-        deviceContacts.forEach(contact => {
-          if (contact.phoneNumbers) {
-            contact.phoneNumbers.forEach(phone => {
-              validUsers.forEach(user => {
-                let num = user.Phone.Number;
-                if (!phone.value.startsWith(country.countryCallingCodes[0]))
-                  num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
-
-                if (phone.value.replace(/\s/g, '') === num && this.contacts.indexOf(user) === -1)
-                  this.contacts.push(user);
-              });
-            });
-          }
-        });
-        that.hasContacts = that.contacts.length > 0;
-        that.settings.saveUserContacts(that.contacts);
-      });
-    });
-  }
-
   onPush(contact) {
     this.serverHost.push(contact);
   }
@@ -201,44 +190,71 @@ export class ContactsComponent implements OnInit {
 
   private loadContacts() {
     this.settings.getAllContacts().then((args: any) => {
-      const fieldType = navigator.contacts.fieldType;
-      const fields = [fieldType.id, fieldType.displayName, fieldType.phoneNumbers, fieldType.name];
-
       if (args.rows.length > 0) {
         const _contacts = [];
-        const cachedItems = [];
         for (let i = 0; i < args.rows.length; i++) {
           const item = args.rows.item(i);
-          cachedItems.push(item);
-          if (_contacts.indexOf(item) === -1)
+          if (!_contacts.some(val => val.Phone.Number === item.number)) {
             _contacts.push({
               CountryCode: item.countrycode,
               FirstName: item.firstname,
+              photo: this.domSanitizer.bypassSecurityTrustResourceUrl(item.photo),
               Phone: {
                 Kind: item.kind,
                 Description: item.description,
                 Number: item.number
               }
             });
+          }
         }
         this.contacts = _contacts;
         this.hasContacts = this.contacts.length > 0;
 
         this.serverHost.emitLoginUser();
-        this.serverHost.getAllRegisteredUsers().subscribe(users => {
+        this.serverHost.getAllRegisteredUsers().subscribe(users =>
           users.forEach(user =>
-            this.contacts.forEach(c => {
-              if (c.CountryCode === user.CountryCode && c.FirstName === user.FirstName && c.Phone.Number === user.Phone.Number)
-                c.IsOnline = user.IsOnline;
-            })
-          );
-        });
+            this.contacts.forEach(c => c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline)
+          )
+        );
       } else {
+        const fieldType = navigator.contacts.fieldType;
+        const fields = [fieldType.id, fieldType.displayName, fieldType.phoneNumbers, fieldType.name, fieldType.photos];
         Contacts.find(fields, { multiple: true, desiredFields: fields, hasPhoneNumber: true })
           .then(this.onContactsLoaded.bind(this))
           .then(() => this.serverHost.emitLoginUser())
           .catch(reason => alert("Error loading contacts: " + reason.error));
       }
+    });
+  }
+
+  private onContactsLoaded(deviceContacts: any[]) {
+    const that = this;
+    this.serverHost.getAllRegisteredUsers().subscribe((users: any) => {
+      this.ngZone.run(() => {
+        this.contacts = [];
+        const currentUser = this.settings.getUser();
+        const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number);
+        const country = Util.GetCountryByCode(currentUser.CountryCode);
+        deviceContacts.forEach(contact => {
+          if (contact.phoneNumbers) {
+            contact.phoneNumbers.forEach(phone => {
+              validUsers.forEach(user => {
+                let num = user.Phone.Number;
+                if (!phone.value.startsWith(country.countryCallingCodes[0]))
+                  num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
+
+                if (phone.value.replace(/\s/g, '') === num && this.contacts.indexOf(user) === -1) {
+                  user.photo = contact.photos && contact.photos.length > 0 ?
+                    this.domSanitizer.bypassSecurityTrustResourceUrl(contact.photos[0].value) : "";
+                  this.contacts.push(user);
+                }
+              });
+            });
+          }
+        });
+        that.hasContacts = that.contacts.length > 0;
+        that.settings.saveUserContacts(that.contacts);
+      });
     });
   }
 }

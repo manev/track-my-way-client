@@ -1,6 +1,7 @@
 import { OnInit, Component, ViewChild } from "@angular/core";
+import { Http } from "@angular/http";
 import { NavController } from 'ionic-angular';
-import { Keyboard } from "ionic-native";
+import { Keyboard, Geolocation } from "ionic-native";
 
 import { ServerHostManager } from "../../services/serverHostManager";
 import { localDeviceSettings } from "../../services/localDeviceSettings";
@@ -15,25 +16,53 @@ export class RegistrationComponent implements OnInit {
 
   @ViewChild("name") nameInput;
 
+  public isLoading;
+
   constructor(
     private serverHost: ServerHostManager,
     private settings: localDeviceSettings,
+    private http: Http,
     private nav: NavController) { }
 
   ngOnInit() {
-    this.countriesInfo = Util.GetAllCountries().sort((item1, item2) => item1.name.localeCompare(item2.name));
+    this.isLoading = true;
+    Geolocation.getCurrentPosition()
+      .then(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        this.http.get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${this.settings.api_ley}`)
+          .subscribe(response => {
+            response.json().results.forEach(r => {
+              const hasCountry = r.types.some(t => t === "country");
+              if (hasCountry) {
+                this.user.CountryCode = r.address_components[0].short_name;
+                setTimeout(() =>
+                  this.isLoading = false, 10000);
+                this.setNameInputFocus();
+                return;
+              }
+            });
+          });
+      }).catch(ex => {
+        alert(ex);
 
-    if (navigator.globalization) {
-      navigator.globalization.getLocaleName(result => {
-        let code = result.value.split('-');
-        this.user.CountryCode = code.length === 1 ? code[0] : code[1];
-      }, null);
-    } else {
-      this.user.CountryCode = "bg"
-    }
+        this.isLoading = false;
+        this.setNameInputFocus();
+
+        if (navigator.globalization)
+          navigator.globalization.getLocaleName(result => {
+            let code = result.value.split('-');
+            this.user.CountryCode = code.length === 1 ? code[0] : code[1];
+          }, null);
+        else
+          this.user.CountryCode = "bg"
+      });
+    this.countriesInfo = Util.GetAllCountries().sort((item1, item2) => item1.name.localeCompare(item2.name));
   }
 
-  ionViewDidEnter() {
+  // ionViewDidEnter() { }
+
+  private setNameInputFocus() {
     setTimeout(() => {
       this.nameInput.setFocus();
       Keyboard.show();

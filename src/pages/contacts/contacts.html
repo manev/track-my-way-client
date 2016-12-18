@@ -22,9 +22,6 @@
       <p>
         Loading contacts ...
       </p>
-      <p>
-        <ion-spinner name="bubbles"></ion-spinner>
-      </p>
     </div>
 
     <div class="contacts" *ngIf="hasContacts === false">
@@ -36,6 +33,7 @@
         <ion-row>
           <ion-col>
             <div class="top-padding">
+              <!--<img src="cdvfile://localhost/content/com.android.contacts/contacts/9/photo" /> -->
               {{ contact.FirstName }}
             </div>
           </ion-col>
@@ -46,7 +44,7 @@
                   <span *ngIf="!contact.IsOnline">offline</span>
                   <ion-icon name="expand" *ngIf="contact.IsOnline"></ion-icon>
               </button>
-              <button ion-button outline small class="button button-outline button-positive" (click)="onPush(contact)">Poke</button>
+              <button *ngIf="false" ion-button outline small class="button button-outline button-positive" (click)="onPush(contact)">Poke</button>
             </div>
           </ion-col>
         </ion-row>
