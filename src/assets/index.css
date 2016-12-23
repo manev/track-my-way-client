@@ -58,11 +58,17 @@ input {
     margin-top: 10px;
 }
 
-.button-register {
-    background: #9D9FA0 !important;
+.margin-top-20 {
+    margin-top: 20px;
 }
 
-.button-width130 {
+.top-80 {
+    top: 80px;
+    margin-left: 15px;
+    position: absolute;
+}
+
+.button-width-130 {
     width: 130px !important;
     border-radius: 0 !important;
 }

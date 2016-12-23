@@ -10,8 +10,7 @@ import { User, Tel } from "../../services/user";
 import { MapComponent } from "../map/map.component";
 
 declare let navigator: any;
-declare let cordova: any;
-declare let resolveLocalFileSystemURI;
+declare let resolveLocalFileSystemURI: any;
 
 @Component({ templateUrl: "contacts.html" })
 export class ContactsComponent implements OnInit {
@@ -32,19 +31,6 @@ export class ContactsComponent implements OnInit {
   private isInSession = false;
 
   ngOnInit() {
-
-    //window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, onFileSystemSuccess, fail);
-    // resolveLocalFileSystemURI("content://com.android.contacts/contacts/9/photo", args => {
-    //   debugger;
-    //   args.file(ar => {
-    //     debugger;
-    //   }, e => {
-    //     debugger;
-    //   });
-    // }, err => {
-    //   debugger;
-    // });
-
     this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
 
     if (Device.serial === "320496b4274211a1")
@@ -195,16 +181,18 @@ export class ContactsComponent implements OnInit {
         for (let i = 0; i < args.rows.length; i++) {
           const item = args.rows.item(i);
           if (!_contacts.some(val => val.Phone.Number === item.number)) {
-            _contacts.push({
+            const contact = {
               CountryCode: item.countrycode,
               FirstName: item.firstname,
-              photo: this.domSanitizer.bypassSecurityTrustResourceUrl(item.photo),
+              photo: item.photo,
               Phone: {
                 Kind: item.kind,
                 Description: item.description,
                 Number: item.number
               }
-            });
+            };
+            this.loadContactAvatar(contact);
+            _contacts.push(contact);
           }
         }
         this.contacts = _contacts;
@@ -212,9 +200,7 @@ export class ContactsComponent implements OnInit {
 
         this.serverHost.emitLoginUser();
         this.serverHost.getAllRegisteredUsers().subscribe(users =>
-          users.forEach(user =>
-            this.contacts.forEach(c => c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline)
-          )
+          users.forEach(user => this.contacts.forEach(c => c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline))
         );
       } else {
         const fieldType = navigator.contacts.fieldType;
@@ -244,8 +230,8 @@ export class ContactsComponent implements OnInit {
                   num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
 
                 if (phone.value.replace(/\s/g, '') === num && this.contacts.indexOf(user) === -1) {
-                  user.photo = contact.photos && contact.photos.length > 0 ?
-                    this.domSanitizer.bypassSecurityTrustResourceUrl(contact.photos[0].value) : "";
+                  user.photo = contact.photos && contact.photos.length > 0 ? contact.photos[0].value : "";
+                  this.loadContactAvatar(user)
                   this.contacts.push(user);
                 }
               });
@@ -256,5 +242,17 @@ export class ContactsComponent implements OnInit {
         that.settings.saveUserContacts(that.contacts);
       });
     });
+  }
+
+  private loadContactAvatar(contact) {
+    if (contact.photo) {
+      resolveLocalFileSystemURI(contact.photo, fileEntry => {
+        fileEntry.file(file => {
+          const fileReader = new FileReader();
+          fileReader.onloadend = (evt: any) => contact.photoAsDataUrl = evt.target.result;
+          fileReader.readAsDataURL(file);
+        }, error => alert(error));
+      }, error => alert(error));
+    }
   }
 }

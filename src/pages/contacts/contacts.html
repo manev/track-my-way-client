@@ -28,24 +28,33 @@
       No contacts found.
     </div>
 
-    <ion-list>
+    <ion-list no-lines>
       <ion-item *ngFor="let contact of contacts">
         <ion-row>
-          <ion-col>
-            <div class="top-padding">
-              <!--<img src="cdvfile://localhost/content/com.android.contacts/contacts/9/photo" /> -->
+          <ion-col *ngIf="contact.photoAsDataUrl" width-20 center class="margin-top-20">
+            <div>
+              <img width="50px" height="50px" [src]="contact.photoAsDataUrl" />
+            </div>
+          </ion-col>
+          <ion-col center>
+            <div>
               {{ contact.FirstName }}
             </div>
           </ion-col>
-          <ion-col>
+          <ion-col center>
             <div>
-              <button ion-button [disabled]="!contact.IsOnline" small outline class="button button-positive button-width130" (click)="openActionSheet(contact)">
+              <button ion-button [disabled]="!contact.IsOnline" small outline class="button button-positive button-width-130" (click)="openActionSheet(contact)">
                   <span *ngIf="contact.IsOnline">start &nbsp;&nbsp;&nbsp;&nbsp;</span>
                   <span *ngIf="!contact.IsOnline">offline</span>
                   <ion-icon name="expand" *ngIf="contact.IsOnline"></ion-icon>
               </button>
               <button *ngIf="false" ion-button outline small class="button button-outline button-positive" (click)="onPush(contact)">Poke</button>
             </div>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col class="top-80">
+            <hr width="75%" />
           </ion-col>
         </ion-row>
       </ion-item>
