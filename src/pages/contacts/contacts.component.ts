@@ -1,6 +1,6 @@
 import { OnInit, NgZone, Component } from "@angular/core";
 import { DomSanitizer } from '@angular/platform-browser';
-import { NavController, AlertController, LoadingController, ActionSheetController } from 'ionic-angular';
+import { NavController, AlertController, LoadingController, ActionSheetController, Loading, Platform } from 'ionic-angular';
 import { Contacts, Device } from "ionic-native";
 
 import { ServerHostManager } from "../../services/serverHostManager";
@@ -10,7 +10,7 @@ import { User, Tel } from "../../services/user";
 import { MapComponent } from "../map/map.component";
 
 declare let navigator: any;
-declare let resolveLocalFileSystemURI: any;
+declare let resolveLocalFileSystemURL: any;
 
 @Component({ templateUrl: "contacts.html" })
 export class ContactsComponent implements OnInit {
@@ -19,6 +19,7 @@ export class ContactsComponent implements OnInit {
     private settings: localDeviceSettings,
     private nav: NavController,
     private ngZone: NgZone,
+    private platform: Platform,
     private domSanitizer: DomSanitizer,
     private loadingController: LoadingController,
     private actionSheet: ActionSheetController,
@@ -32,13 +33,6 @@ export class ContactsComponent implements OnInit {
 
   ngOnInit() {
     this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
-
-    if (Device.serial === "320496b4274211a1")
-      this.setupMockUser();
-    else
-      this.loadContacts();
-
-    this.setupPushNotification();
 
     this.serverHost.onUserDisconnect((user: User) => {
       this.contacts.forEach(contact => {
@@ -77,26 +71,34 @@ export class ContactsComponent implements OnInit {
     actionSheet.present();
   }
 
-  startTracking(contact) {
+  onPush(contact) {
+    this.serverHost.push(contact);
+  }
+
+  ionViewDidLoad() {
+    if (Device.serial === "320496b4274211a1")
+      this.setupMockUser();
+    else
+      this.loadContacts();
+
+    this.setupPushNotification();
+  }
+
+  private startTracking(contact) {
     if (!contact.IsOnline) {
       const prompt = this.alert.create({ title: "Warning!", subTitle: "User is offline", buttons: ['OK'] });
       prompt.present();
       return;
     }
 
-    const waitSpinner = this.loadingController.create({
-      showBackdrop: true,
-      spinner: "ios",
-      content: "Waiting for contact response..."
-    });
-    waitSpinner.present();
+    const loading = this.showLoading("Waiting for contact response...");
 
     this.serverHost.trackingResponse(requestResult => {
-      waitSpinner.dismiss();
+      loading.dismiss();
 
       if (requestResult.IsAccepted) {
         this.serverHost.removeTrackingListener();
-        this.nav.setRoot(MapComponent, { contact: contact });
+        this.nav.push(MapComponent, { contact: contact });
       } else {
         const prompt = this.alert.create({ title: "Warning!", subTitle: "User refused to track you!", buttons: ['OK'] });
         prompt.present();
@@ -106,13 +108,7 @@ export class ContactsComponent implements OnInit {
     this.serverHost.requestTracking(contact);
   }
 
-  onPush(contact) {
-    this.serverHost.push(contact);
-  }
-
   private onTrackingRequestRecieved(sender) {
-    if (this.isInSession) return;
-
     this.isInSession = true;
 
     let that = this;
@@ -121,18 +117,18 @@ export class ContactsComponent implements OnInit {
       title: "Request recieved",
       message: `${user.FirstName} wants to share location`,
       buttons: [{
+        text: 'OK',
+        handler: data => {
+          that.serverHost.sendTrackingResponse(user, true);
+          this.nav.push(MapComponent, { contact: that.contacts.find(c => c.Phone.Number === user.Phone.Number) });
+          //this.nav.setRoot(MapComponent, { contact: user });
+        }
+      }, {
         text: 'Cancel',
         handler: data => {
           that.serverHost.sendTrackingResponse(user, false);
           that.isInSession = false;
           prompt.dismiss();
-        }
-      }, {
-        text: 'OK',
-        handler: data => {
-          that.serverHost.sendTrackingResponse(user, true);
-          this.nav.push(MapComponent, { contact: user });
-          //this.nav.setRoot(MapComponent, { contact: user });
         }
       }]
     });
@@ -176,83 +172,135 @@ export class ContactsComponent implements OnInit {
 
   private loadContacts() {
     this.settings.getAllContacts().then((args: any) => {
-      if (args.rows.length > 0) {
-        const _contacts = [];
-        for (let i = 0; i < args.rows.length; i++) {
-          const item = args.rows.item(i);
-          if (!_contacts.some(val => val.Phone.Number === item.number)) {
-            const contact = {
-              CountryCode: item.countrycode,
-              FirstName: item.firstname,
-              photo: item.photo,
-              Phone: {
-                Kind: item.kind,
-                Description: item.description,
-                Number: item.number
-              }
-            };
-            this.loadContactAvatar(contact);
-            _contacts.push(contact);
-          }
-        }
-        this.contacts = _contacts;
-        this.hasContacts = this.contacts.length > 0;
-
-        this.serverHost.emitLoginUser();
-        this.serverHost.getAllRegisteredUsers().subscribe(users =>
-          users.forEach(user => this.contacts.forEach(c => c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline))
-        );
-      } else {
-        const fieldType = navigator.contacts.fieldType;
-        const fields = [fieldType.id, fieldType.displayName, fieldType.phoneNumbers, fieldType.name, fieldType.photos];
-        Contacts.find(fields, { multiple: true, desiredFields: fields, hasPhoneNumber: true })
-          .then(this.onContactsLoaded.bind(this))
-          .then(() => this.serverHost.emitLoginUser())
-          .catch(reason => alert("Error loading contacts: " + reason.error));
-      }
+      if (args.rows.length > 0)
+        this.loadContactsFromCache(args.rows);
+      else
+        this.loadContactsFromDevice();
     });
   }
 
-  private onContactsLoaded(deviceContacts: any[]) {
+  private loadContactsFromCache(rows) {
+    const _contacts = [];
+    const loadingPhotoPromises = new Array<Promise<any>>();
+
+    const loading = this.showLoading("Loading Contacts...");
+
+    for (let i = 0; i < rows.length; i++) {
+      const item = rows.item(i);
+      if (!_contacts.some(val => val.Phone.Number === item.number)) {
+        const contact = {
+          CountryCode: item.countrycode,
+          FirstName: item.firstname,
+          photo: item.photo,
+          Phone: {
+            Kind: item.kind,
+            Description: item.description,
+            Number: item.number
+          }
+        };
+        loadingPhotoPromises.push(this.loadContactAvatar(contact));
+        _contacts.push(contact);
+      }
+    }
+
+    Promise.all(loadingPhotoPromises).then(() => {
+      this.contacts = _contacts;
+      this.hasContacts = this.contacts.length > 0;
+      loading.dismiss();
+    });
+
+    this.serverHost.getAllRegisteredUsers().subscribe(users =>
+      users.forEach(user => this.contacts.forEach(c => {
+        c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline;
+      }))
+    );
+  }
+
+  private loadContactsFromDevice() {
+    const loading = this.showLoading("Loading Contacts...");
+
+    const fieldType = navigator.contacts.fieldType;
+    const fields = [fieldType.id, fieldType.displayName, fieldType.phoneNumbers, fieldType.name, fieldType.photos];
+    Contacts.find(fields, { multiple: true, desiredFields: fields, hasPhoneNumber: true })
+      .then(contacts => this.onContactsLoaded(contacts, loading))
+      .catch(reason => alert("Error loading contacts: " + reason.error));
+  }
+
+  private onContactsLoaded(deviceContacts: any[], loading: Loading) {
     const that = this;
     this.serverHost.getAllRegisteredUsers().subscribe((users: any) => {
-      this.ngZone.run(() => {
-        this.contacts = [];
-        const currentUser = this.settings.getUser();
-        const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number);
-        const country = Util.GetCountryByCode(currentUser.CountryCode);
-        deviceContacts.forEach(contact => {
-          if (contact.phoneNumbers) {
-            contact.phoneNumbers.forEach(phone => {
-              validUsers.forEach(user => {
-                let num = user.Phone.Number;
-                if (!phone.value.startsWith(country.countryCallingCodes[0]))
-                  num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
+      const localContacts = [];
+      const loadingPhotoPromises = new Array<Promise<any>>();
+      const currentUser = this.settings.getUser();
+      const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number);
+      const country = Util.GetCountryByCode(currentUser.CountryCode);
+      deviceContacts.forEach(contact => {
+        if (contact.phoneNumbers) {
+          contact.phoneNumbers.forEach(phone => {
+            validUsers.forEach(user => {
+              let num = user.Phone.Number;
+              if (!phone.value.startsWith(country.countryCallingCodes[0]))
+                num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
 
-                if (phone.value.replace(/\s/g, '') === num && this.contacts.indexOf(user) === -1) {
+              if (!localContacts.find(c => c.Phone.Number !== num))
+                if (phone.value.replace(/\s/g, '') === num) {
                   user.photo = contact.photos && contact.photos.length > 0 ? contact.photos[0].value : "";
-                  this.loadContactAvatar(user)
-                  this.contacts.push(user);
+                  loadingPhotoPromises.push(this.loadContactAvatar(user));
+                  localContacts.push(user);
                 }
-              });
             });
-          }
-        });
+          });
+        }
+      });
+      Promise.all(loadingPhotoPromises).then(() => {
+        that.contacts = localContacts;
         that.hasContacts = that.contacts.length > 0;
         that.settings.saveUserContacts(that.contacts);
+        loading.dismiss();
       });
     });
   }
 
-  private loadContactAvatar(contact) {
-    if (contact.photo) {
-      resolveLocalFileSystemURI(contact.photo, fileEntry => {
-        fileEntry.file(file => {
-          const fileReader = new FileReader();
-          fileReader.onloadend = (evt: any) => contact.photoAsDataUrl = evt.target.result;
-          fileReader.readAsDataURL(file);
-        }, error => alert(error));
-      }, error => alert(error));
+  private loadContactAvatar(contact): Promise<any> {
+    const executor = (resolve, reject) => {
+      if (contact.photo) {
+        resolveLocalFileSystemURL(contact.photo, fileEntry => {
+          fileEntry.file(file => {
+            const fileReader = new FileReader();
+            fileReader.onloadend = (evt: any) => {
+              contact.photoAsDataUrl = evt.target.result;
+              resolve();
+            };
+            fileReader.readAsDataURL(file);
+          }, error => {
+            alert(error);
+          });
+        }, error => alert(`Error in: resolveLocalFileSystemURL: ${error.code}`));
+      }
     }
+    return new Promise(executor);
+  }
+
+  private showLoading(content: string) {
+    const loading = this.loadingController.create({
+      content: content,
+      spinner: "ios"
+    });
+    loading.present();
+
+    loading.onDidDismiss(() => {
+      if (backButtonHandler)
+        backButtonHandler();
+    });
+
+    const backButtonHandler = this.platform.registerBackButtonAction(() => {
+      backButtonHandler();
+      if (loading)
+        loading.dismiss();
+      else
+        this.platform.exitApp();
+    }, 101);
+
+    return loading;
   }
 }

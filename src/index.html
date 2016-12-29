@@ -27,7 +27,7 @@
 </head>
 
 <body>
-  <ion-app>
+  <!--<ion-app>
     <div class='container'>
       <div class='loader'>
         <div class='loader--dot'></div>
@@ -39,18 +39,28 @@
         <div class='loader--text'></div>
       </div>
     </div>
+
+  </ion-app>-->
+
+  <ion-app style="width: 0px; height: 0px;">
+      <div style="width:100%; height:100%; background:#001c00; color: whitesmoke; font-family: Times New Roman", Times, serif">
+          <div style="position: fixed; font-size: 40px; top:45%; left: 10%; transform: translate(-50%, -50%);transform: rotate(-50deg);">
+            &copy; TrackMyWay
+          <div>
+      </div>
   </ion-app>
 
-  <!-- cordova.js required for cordova apps -->
-  <script src="cordova.js"></script>
 
-  <script src="assets/socket.io-1.4.5.js"></script>
+<!-- cordova.js required for cordova apps -->
+<script src="cordova.js"></script>
 
-  <!-- The polyfills js is generated during the build process -->
-  <script src="build/polyfills.js"></script>
+<script src="assets/socket.io-1.4.5.js"></script>
 
-  <!-- The bundle js is generated during the build process -->
-  <script src="build/main.js"></script>
+<!-- The polyfills js is generated during the build process -->
+<script src="build/polyfills.js"></script>
+
+<!-- The bundle js is generated during the build process -->
+<script src="build/main.js"></script>
 
 </body>
 

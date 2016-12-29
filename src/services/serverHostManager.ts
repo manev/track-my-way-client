@@ -10,13 +10,24 @@ declare var io: any;
 
 @Injectable()
 export class ServerHostManager {
-  private live_url: string = 'http://whereru-kokata.rhcloud.com:8000';
-  //private live_url = "ws://192.168.1.121:8081";
-
-  private socket = io(this.live_url, { reconnection: true });
+  private liveUrl = "http://whereru-kokata.rhcloud.com:8000";
+  private localhost = "ws://192.168.1.121:8081";
+  private socket;
   private usersObservable: Observable<Array<User>>;
 
-  constructor(private settings: localDeviceSettings) { }
+  constructor(private settings: localDeviceSettings) {
+    // this.liveUrl = this.localhost;
+    this.socket = io(this.liveUrl, {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    });
+    this.socket.on('disconnect', () => {
+      debugger;
+      console.log('disconnected to server');
+    });
+  }
 
   emitLoginUser() {
     let user = this.settings.getUser();
@@ -49,6 +60,8 @@ export class ServerHostManager {
       });
       this.usersObservable = new Observable<Array<User>>(observer => _observer = observer).share();
     }
+    this.emitLoginUser();
+
     return this.usersObservable;
   }
 

@@ -6,7 +6,7 @@
 }
 
 #spinner {
-    text-align: center;
+    /*text-align: center;*/
 }
 
 /*.spinner {
@@ -17,14 +17,14 @@
 }*/
 
 .root {
-    padding: 50px 0 0 0;
+    padding: 0 0 0 0;
     z-index: 1000;
 }
 
-.spinner svg {
+/*.spinner svg {
     width: 19% !important;
     height: 85px !important;
-}
+}*/
 
 ion-nav {
     position: relative !important;
@@ -68,9 +68,10 @@ input {
     position: absolute;
 }
 
-.button-width-130 {
-    width: 130px !important;
+.button-width-100 {
+    width: 100px !important;
     border-radius: 0 !important;
+    margin-left: 65px;
 }
 
 .select {
@@ -86,6 +87,10 @@ input {
 
 .number-text {
     margin-bottom: 5px !important;
+}
+
+.img-round {
+  border-radius: 50%;
 }
 
 body {

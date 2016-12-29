@@ -55,9 +55,8 @@
   <feature name="StatusBar">
     <param name="ios-package" onload="true" value="CDVStatusBar"/>
   </feature>
-  <plugin name="com.googlemaps.ios" version="1.10.4"/>
   <plugin name="cordova-plugin-contacts" version="2.1.0"/>
-  <plugin name="cordova-plugin-geolocation" version="1.0.1"/>
+  <plugin name="cordova-plugin-geolocation" version="2.4.1"/>
   <plugin name="cordova-plugin-globalization" version="1.0.2"/>
   <plugin name="cordova-plugin-network-information" version="1.1.0"/>
   <plugin name="cordova-plugin-dialogs" version="1.2.0"/>
@@ -71,5 +70,14 @@
   <plugin name="cordova-plugin-device" spec="~1.1.2"/>
   <plugin name="cordova-plugin-splashscreen" spec="~3.2.2"/>
   <plugin name="cordova-plugin-statusbar" spec="~2.1.3"/>
+  <plugin name="cordova-plugin-googlemaps" src="https://github.com/mapsplugin/cordova-plugin-googlemaps">
+    <variable name="API_KEY_FOR_ANDROID" value="AIzaSyAsNgzOfJz7WOW9REnYtHV8RbPZo4dhUi4"/>
+    <variable name="API_KEY_FOR_IOS" value="AIzaSyBMoqwVwMhLX8StfTBLAU5lj4WlAECMvLc"/>
+  </plugin>
+  <plugin name="cordova-plugin-file" src="https://github.com/apache/cordova-plugin-file"/>
+  <plugin name="cordova-plugin-insomnia" version="4.1.0" source="npm"/>
+  <plugin name="cordova-plugin-mauron85-background-geolocation" spec="^2.2.0">
+    <variable name="ALWAYS_USAGE_DESCRIPTION" value="This app requires background tracking enabled"/>
+  </plugin>
   <icon src="resources\android\icon\drawable-xhdpi-icon.png"/>
 </widget>

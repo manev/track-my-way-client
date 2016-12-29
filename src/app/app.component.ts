@@ -29,13 +29,45 @@ export class MyApp {
       StatusBar.styleDefault();
       Splashscreen.hide();
 
-      this.configInsomnia();
-      this.configNetworkService();
-      this.configLocationService();
-      this.configResume();
-      this.configBackButton();
-      this.attachLogListener();
+      Diagnostic.requestContactsAuthorization().then(args => {
+        if (args === "DENIED") {
+          this.platform.exitApp();
+        } else {
+          this.configInsomnia();
+          this.configNetworkService();
+          this.configLocationService();
+          this.configResume();
+          //this.configBackButton();
+          this.configLogListener();
+        }
+      });
     });
+  }
+
+  onEnableBackgroundMode() {
+    //BackgroundMode.enable();
+    this.menu.close();
+  }
+
+  onDisableBackgroundMode() {
+    this.menu.close();
+  }
+
+  onMenuClose() {
+    this.menu.close();
+  }
+
+  onReconnect() {
+    const loading = this.loading.create({
+      content: "Connecting to server..."
+    });
+    loading.present();
+
+    this.serverHost.emitLoginUser();
+    this.serverHost.addPingListener(data => loading.dismiss());
+
+    this.serverHost.sendPing();
+    this.menu.close();
   }
 
   private configBackButton() {
@@ -107,7 +139,7 @@ export class MyApp {
     }
   }
 
-  private attachLogListener() {
+  private configLogListener() {
     this.serverHost.addLogListener(message => alert(message));
   }
 
@@ -121,12 +153,13 @@ export class MyApp {
         if (value === 0) {
           this.alertLocation = this.alertController.create({
             message: "You need to enable your device location service in order to run this app",
+            title: "Enable Location?",
             buttons: [{
               text: "Exit",
               handler: () => this.platform.exitApp()
             },
             {
-              text: "Enable",
+              text: "GO TO SETTINGS",
               handler: () => BackgroundGeolocation.showLocationSettings()
             }]
           });
@@ -143,31 +176,5 @@ export class MyApp {
         }
       })
       .catch(error => alert(`BackgroundGeolocation.isLocationEnabled error: ${error}`));
-  }
-
-  onEnableBackgroundMode() {
-    //BackgroundMode.enable();
-    this.menu.close();
-  }
-
-  onDisableBackgroundMode() {
-    this.menu.close();
-  }
-
-  onMenuClose() {
-    this.menu.close();
-  }
-
-  onReconnect() {
-    const loading = this.loading.create({
-      content: "Connecting to server..."
-    });
-    loading.present();
-
-    this.serverHost.emitLoginUser();
-    this.serverHost.addPingListener(data => loading.dismiss());
-
-    this.serverHost.sendPing();
-    this.menu.close();
   }
 }

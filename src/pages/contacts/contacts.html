@@ -1,40 +1,27 @@
-<ion-toolbar primary class="bar bar-header bar-stable">
-  <button ion-button menuToggle left>
+<ion-header>
+  <ion-toolbar color="primary">
+    <button ion-button menuToggle left>
         <ion-icon name="menu"></ion-icon>
     </button>
-  <ion-title>Contacts</ion-title>
-  <ion-buttons start>
-    <button ion-button>
-            <ion-icon name="contact"></ion-icon>
-        </button>
-  </ion-buttons>
-  <ion-buttons end>
-    <button ion-button>
+    <ion-title>Contacts</ion-title>
+    <ion-buttons end>
+      <button ion-button>
             <ion-icon name="search"></ion-icon>
         </button>
-  </ion-buttons>
-</ion-toolbar>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
 
 <ion-content>
-  <ion-searchbar *ngIf="false"></ion-searchbar>
   <div class="root">
-    <div class="contacts" *ngIf="hasContacts === null">
-      <p>
-        Loading contacts ...
-      </p>
-    </div>
-
     <div class="contacts" *ngIf="hasContacts === false">
       No contacts found.
     </div>
-
     <ion-list no-lines>
       <ion-item *ngFor="let contact of contacts">
         <ion-row>
           <ion-col *ngIf="contact.photoAsDataUrl" width-20 center class="margin-top-20">
-            <div>
-              <img width="50px" height="50px" [src]="contact.photoAsDataUrl" />
-            </div>
+            <img class="img-round" width="55px" height="55px" [src]="contact.photoAsDataUrl" />
           </ion-col>
           <ion-col center>
             <div>
@@ -43,12 +30,11 @@
           </ion-col>
           <ion-col center>
             <div>
-              <button ion-button [disabled]="!contact.IsOnline" small outline class="button button-positive button-width-130" (click)="openActionSheet(contact)">
-                  <span *ngIf="contact.IsOnline">start &nbsp;&nbsp;&nbsp;&nbsp;</span>
+              <button ion-button small outline class="button button-positive button-width-100" (click)="openActionSheet(contact)" [disabled]="!contact.IsOnline">
+                  <span *ngIf="contact.IsOnline">share &nbsp;&nbsp;&nbsp;&nbsp;</span>
                   <span *ngIf="!contact.IsOnline">offline</span>
                   <ion-icon name="expand" *ngIf="contact.IsOnline"></ion-icon>
               </button>
-              <button *ngIf="false" ion-button outline small class="button button-outline button-positive" (click)="onPush(contact)">Poke</button>
             </div>
           </ion-col>
         </ion-row>
@@ -59,6 +45,5 @@
         </ion-row>
       </ion-item>
     </ion-list>
-
   </div>
 </ion-content>

@@ -3,7 +3,6 @@ import { NavController, NavParams, ViewController, Platform } from 'ionic-angula
 import { Geolocation } from 'ionic-native';
 
 import { ServerHostManager } from "../../services/serverHostManager";
-import { ContactsComponent } from "./../contacts/contacts.component";
 
 declare var plugin: any;
 declare var navigator: any;
@@ -16,8 +15,10 @@ export class MapComponent implements OnInit {
   private watchPositionHandler;
   private backButtonHandler;
   private isDisposed = false;
+  private zoom = 17;
 
   @ViewChild("mapHost") mapHost;
+  @ViewChild("bntZoomIn") bntZoomIn;
 
   constructor(
     private params: NavParams,
@@ -34,7 +35,7 @@ export class MapComponent implements OnInit {
       var message = user.FirstName + " has been disconnected.";
       navigator.notification.alert(message, () => {
         this.dispose();
-        this.nav.setRoot(ContactsComponent);
+        this.nav.pop();
       }, "", "Back to contacts");
     });
     this.loadGoogleMap();
@@ -43,6 +44,16 @@ export class MapComponent implements OnInit {
 
   ngOnDestroy() {
     this.dispose();
+  }
+
+  zoomIn(event) {
+    this.map.setZoom(++this.zoom);
+    event.preventDefault();
+  }
+
+  zoomOut(event) {
+    this.map.setZoom(--this.zoom);
+    event.preventDefault();
   }
 
   private loadGoogleMap() {
@@ -58,28 +69,29 @@ export class MapComponent implements OnInit {
   private initMap(div) {
     let isLoaded = false;
     let isAnimationInProgress = false;
-    let zoom = 17;
     let isMapDragged = false;
 
     this.map = plugin.google.maps.Map.getMap();
     this.map.addEventListener(plugin.google.maps.event.CAMERA_CHANGE, args => {
       if (isLoaded) {
-        zoom = args.zoom;
+        this.zoom = args.zoom;
         //isMapDragged = true;
       }
     });
 
     this.map.on(plugin.google.maps.event.MAP_READY, () => {
       this.map.setDiv(div);
+      //this.map.setClickable(false);
+      this.map.setMyLocationEnabled(true);
       this.map.refreshLayout();
     });
 
     this.watchPositionHandler = Geolocation.watchPosition({ timeout: 15000, enableHighAccuracy: true })
-      .subscribe(result => {
+      .subscribe((result: any) => {
         if (result.coords)
           this.positionChanged(result.coords.latitude, result.coords.longitude);
         else
-          alert("There was a problem retrieving your Geolocation. Try to restart your location service.");
+          alert(`There was a problem retrieving your Geolocation.  Try to restart your location service. ${result.message}`);
       });
 
     this.serverHost.onPositionRecieved(position => {
@@ -91,7 +103,7 @@ export class MapComponent implements OnInit {
       var cameraSettings = {
         'target': pos,
         'tilt': 0,
-        'zoom': zoom,
+        'zoom': this.zoom,
         'bearing': 140
       };
 
@@ -106,10 +118,30 @@ export class MapComponent implements OnInit {
       }
 
       this.map.clear();
-      this.map.addMarker({
-        position: pos,
-        title: this.contact.FirstName
-      }, marker => marker.showInfoWindow());
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 65;
+      canvas.height = 60;
+      const context = canvas.getContext("2d");
+
+      const img = new Image();
+      img.src = this.contact.photoAsDataUrl;
+      img.onload = () => {
+        context.drawImage(img, 0, 0, context.canvas.width, context.canvas.height);
+        context.strokeStyle = "#002500";
+        context.lineWidth = 5;
+        context.strokeRect(0, 0, context.canvas.width, context.canvas.height);
+
+        this.map.addMarker({
+          position: pos,
+          styles: {
+            "maxWidth": "80%",
+            "text-align": "center"
+          },
+          title: this.contact.FirstName,
+          icon: canvas.toDataURL()
+        }, marker => marker.showInfoWindow());
+      };
     });
   }
 
@@ -120,10 +152,12 @@ export class MapComponent implements OnInit {
 
   private configBackButton() {
     this.backButtonHandler = this.platform.registerBackButtonAction(() => {
-      navigator.notification.confirm("Are you sure you want to stop the session?", () => {
-        this.dispose();
-        this.nav.setRoot(ContactsComponent);
-      }, "Cancel", "Back to contacts");
+      navigator.notification.confirm("Are you sure you want to stop the session?", args => {
+        if (args === 2) {
+          this.dispose();
+          this.nav.pop();
+        }
+      }, "Disconnect?", ["Cancel", "<< Go back"]);
     }, 101);
   }
 
