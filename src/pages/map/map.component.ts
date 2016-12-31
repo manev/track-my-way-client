@@ -86,7 +86,7 @@ export class MapComponent implements OnInit {
       this.map.refreshLayout();
     });
 
-    this.watchPositionHandler = Geolocation.watchPosition({ timeout: 15000, enableHighAccuracy: true })
+    this.watchPositionHandler = Geolocation.watchPosition({ timeout: 15000, enableHighAccuracy: false })
       .subscribe((result: any) => {
         if (result.coords)
           this.positionChanged(result.coords.latitude, result.coords.longitude);
@@ -127,10 +127,22 @@ export class MapComponent implements OnInit {
       const img = new Image();
       img.src = this.contact.photoAsDataUrl;
       img.onload = () => {
+        context.save();
+        context.beginPath();
+        context.arc(30, 30, 30, 0, Math.PI * 2, true);
+        context.closePath();
+        context.clip();
+
         context.drawImage(img, 0, 0, context.canvas.width, context.canvas.height);
         context.strokeStyle = "#002500";
         context.lineWidth = 5;
         context.strokeRect(0, 0, context.canvas.width, context.canvas.height);
+
+        context.beginPath();
+        context.arc(0, 0, 30, 0, Math.PI * 2, true);
+        context.clip();
+        context.closePath();
+        context.restore();
 
         this.map.addMarker({
           position: pos,
@@ -139,7 +151,7 @@ export class MapComponent implements OnInit {
             "text-align": "center"
           },
           title: this.contact.FirstName,
-          icon: canvas.toDataURL()
+          icon: canvas.toDataURL("image/png")
         }, marker => marker.showInfoWindow());
       };
     });

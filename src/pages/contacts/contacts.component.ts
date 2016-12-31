@@ -1,4 +1,4 @@
-import { OnInit, NgZone, Component } from "@angular/core";
+import { Component } from "@angular/core";
 import { DomSanitizer } from '@angular/platform-browser';
 import { NavController, AlertController, LoadingController, ActionSheetController, Loading, Platform } from 'ionic-angular';
 import { Contacts, Device } from "ionic-native";
@@ -13,12 +13,11 @@ declare let navigator: any;
 declare let resolveLocalFileSystemURL: any;
 
 @Component({ templateUrl: "contacts.html" })
-export class ContactsComponent implements OnInit {
+export class ContactsComponent {
   constructor(
     private serverHost: ServerHostManager,
     private settings: localDeviceSettings,
     private nav: NavController,
-    private ngZone: NgZone,
     private platform: Platform,
     private domSanitizer: DomSanitizer,
     private loadingController: LoadingController,
@@ -30,19 +29,6 @@ export class ContactsComponent implements OnInit {
   contacts = Array<User>();
 
   private isInSession = false;
-
-  ngOnInit() {
-    this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
-
-    this.serverHost.onUserDisconnect((user: User) => {
-      this.contacts.forEach(contact => {
-        if (contact.Phone.Number === user.Phone.Number) {
-          contact.IsOnline = false;
-          return;
-        }
-      });
-    });
-  }
 
   openActionSheet(contact) {
     const actionSheet = this.actionSheet.create({
@@ -75,7 +61,20 @@ export class ContactsComponent implements OnInit {
     this.serverHost.push(contact);
   }
 
+  ionViewDidEnter() {
+    this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
+  }
+
   ionViewDidLoad() {
+    this.serverHost.onUserDisconnect((user: User) => {
+      this.contacts.forEach(contact => {
+        if (contact.Phone.Number === user.Phone.Number) {
+          contact.IsOnline = false;
+          return;
+        }
+      });
+    });
+
     if (Device.serial === "320496b4274211a1")
       this.setupMockUser();
     else
@@ -109,8 +108,6 @@ export class ContactsComponent implements OnInit {
   }
 
   private onTrackingRequestRecieved(sender) {
-    this.isInSession = true;
-
     let that = this;
     let user = <User>JSON.parse(sender);
     const prompt = this.alert.create({
@@ -119,7 +116,9 @@ export class ContactsComponent implements OnInit {
       buttons: [{
         text: 'OK',
         handler: data => {
-          that.serverHost.sendTrackingResponse(user, true);
+          this.isInSession = true;
+          this.serverHost.sendTrackingResponse(user, true);
+          this.serverHost.removeTrackingListener();
           this.nav.push(MapComponent, { contact: that.contacts.find(c => c.Phone.Number === user.Phone.Number) });
           //this.nav.setRoot(MapComponent, { contact: user });
         }
@@ -127,7 +126,6 @@ export class ContactsComponent implements OnInit {
         text: 'Cancel',
         handler: data => {
           that.serverHost.sendTrackingResponse(user, false);
-          that.isInSession = false;
           prompt.dismiss();
         }
       }]
