@@ -23,9 +23,9 @@ export class ServerHostManager {
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5
     });
-    this.socket.on('disconnect', () => {
+    this.socket.on("disconnect", () => {
       debugger;
-      console.log('disconnected to server');
+      console.log("disconnected to server");
     });
   }
 

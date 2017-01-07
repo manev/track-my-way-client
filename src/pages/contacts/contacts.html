@@ -14,13 +14,13 @@
 
 <ion-content>
   <div class="root">
-    <div class="contacts" *ngIf="hasContacts === false">
+    <div class="contacts" *ngIf="contacts.length === 0">
       No contacts found.
     </div>
     <ion-list no-lines>
-      <ion-item *ngFor="let contact of contacts">
+      <ion-item *ngFor="let contact of contacts" class="margin-top-minus-5">
         <ion-row>
-          <ion-col *ngIf="contact.photoAsDataUrl" width-20 center class="margin-top-20">
+          <ion-col *ngIf="contact.photoAsDataUrl" width-20 center class="margin-top-5">
             <img class="img-round" width="55px" height="55px" [src]="contact.photoAsDataUrl" />
           </ion-col>
           <ion-col center>

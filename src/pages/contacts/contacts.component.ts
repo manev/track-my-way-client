@@ -25,10 +25,11 @@ export class ContactsComponent {
     private alert: AlertController) {
   }
 
-  hasContacts: any = null;
   contacts = Array<User>();
 
   private isInSession = false;
+  private fieldType = navigator.contacts.fieldType;
+  private fields = [this.fieldType.id, this.fieldType.displayName, this.fieldType.phoneNumbers, this.fieldType.name, this.fieldType.photos];
 
   openActionSheet(contact) {
     const actionSheet = this.actionSheet.create({
@@ -164,7 +165,6 @@ export class ContactsComponent {
     let user = new User("BG", "Koko", new Tel("+359889356845", 1));
     user.IsOnline = true;
     this.contacts.push(user);
-    this.hasContacts = true;
     this.serverHost.emitLoginUser();
   }
 
@@ -203,23 +203,49 @@ export class ContactsComponent {
 
     Promise.all(loadingPhotoPromises).then(() => {
       this.contacts = _contacts;
-      this.hasContacts = this.contacts.length > 0;
       loading.dismiss();
     });
 
-    this.serverHost.getAllRegisteredUsers().subscribe(users =>
+    this.serverHost.getAllRegisteredUsers().subscribe((users: any) => {
       users.forEach(user => this.contacts.forEach(c => {
         c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline;
-      }))
-    );
+      }));
+
+      Contacts.find(this.fields, { multiple: true, desiredFields: this.fields, hasPhoneNumber: true })
+        .then(deviceContacts => {
+          const currentUser = this.settings.getUser();
+          const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number && this.contacts.find(c => c.Phone.Number !== user.Phone.Number));
+          const country = Util.GetCountryByCode(currentUser.CountryCode);
+          const newContacts = [];
+          deviceContacts.forEach(contact => {
+            if (contact.phoneNumbers) {
+              contact.phoneNumbers.forEach(phone => {
+                validUsers.forEach((user, index) => {
+                  let num = user.Phone.Number;
+                  if (!phone.value.startsWith(country.countryCallingCodes[0]))
+                    num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
+
+                  if (phone.value.replace(/\s/g, '') === num) {
+                    user.photo = contact.photos && contact.photos.length > 0 ? contact.photos[0].value : "";
+                    loadingPhotoPromises.push(this.loadContactAvatar(user));
+                    newContacts.push(user);
+                    validUsers.splice(index);
+                    if (validUsers.length === 0)
+                      return Promise.all(loadingPhotoPromises).then(() => this.showNewContacts(newContacts));
+                  }
+                });
+              });
+            }
+          });
+        })
+        .catch(reason => alert("Error loading contacts: " + reason.error));
+    });
   }
 
   private loadContactsFromDevice() {
     const loading = this.showLoading("Loading Contacts...");
 
-    const fieldType = navigator.contacts.fieldType;
-    const fields = [fieldType.id, fieldType.displayName, fieldType.phoneNumbers, fieldType.name, fieldType.photos];
-    Contacts.find(fields, { multiple: true, desiredFields: fields, hasPhoneNumber: true })
+    Contacts.find(this.fields, { multiple: true, desiredFields: this.fields, hasPhoneNumber: true })
       .then(contacts => this.onContactsLoaded(contacts, loading))
       .catch(reason => alert("Error loading contacts: " + reason.error));
   }
@@ -252,7 +278,6 @@ export class ContactsComponent {
       });
       Promise.all(loadingPhotoPromises).then(() => {
         that.contacts = localContacts;
-        that.hasContacts = that.contacts.length > 0;
         that.settings.saveUserContacts(that.contacts);
         loading.dismiss();
       });
@@ -300,5 +325,25 @@ export class ContactsComponent {
     }, 101);
 
     return loading;
+  }
+
+  private showNewContacts(newContacts: any[]) {
+    const alert = this.alert.create({
+      title: `We have found ${newContacts.length} new contacts`,
+      message: "Do you want to add them in your list? ",
+      buttons: [
+        {
+          text: "Cancel",
+        },
+        {
+          text: "OK",
+          handler: () => {
+            this.contacts.push(...newContacts);
+            // this.settings.saveUserContacts(newContacts);
+          }
+        }
+      ]
+    });
+    alert.present();
   }
 }
