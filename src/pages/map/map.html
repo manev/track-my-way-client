@@ -10,8 +10,12 @@
     </div>
   </div>
 
-  <div style="width:100%; height:100%; margin: 0px; top: 0; left: 0; position: relative" #mapHost>
-    <div style="position: absolute; bottom: 60px; right: 10px; z-index: 100000">
+  <div #mapHost google-map>
+    <div google-map-host>
+      <button *ngIf="isMapDragged" (click)="moveToTarget($event)" ion-button icon-only class="zoom-button">
+        <span style="color:black"><ion-icon name="md-locate"></ion-icon></span>
+      </button>
+      <br />
       <button (click)="zoomIn($event)" ion-button class="zoom-button">
        <span style="color:black"> + </span>
       </button>

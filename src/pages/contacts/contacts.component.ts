@@ -11,6 +11,7 @@ import { MapComponent } from "../map/map.component";
 
 declare let navigator: any;
 declare let resolveLocalFileSystemURL: any;
+declare let cordova;
 
 @Component({ templateUrl: "contacts.html" })
 export class ContactsComponent {
@@ -40,14 +41,14 @@ export class ContactsComponent {
           icon: "navigate",
           handler: () => this.startTracking(contact)
         },
-        {
-          icon: "share",
-          text: "Share your location via direct link"
-        },
-        {
-          icon: "chatbubbles",
-          text: "Start chat"
-        },
+        // {
+        //   icon: "share",
+        //   text: "Share your location via direct link"
+        // },
+        // {
+        //   icon: "chatbubbles",
+        //   text: "Start chat"
+        // },
         {
           role: "cancel",
           text: "Cancel",
@@ -207,20 +208,23 @@ export class ContactsComponent {
     });
 
     this.serverHost.getAllRegisteredUsers().subscribe((users: any) => {
-      users.forEach(user => this.contacts.forEach(c => {
-        c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline;
-      }));
+      users.forEach(user => this.contacts.forEach(c =>
+        c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline
+      ));
 
       Contacts.find(this.fields, { multiple: true, desiredFields: this.fields, hasPhoneNumber: true })
         .then(deviceContacts => {
           const currentUser = this.settings.getUser();
-          const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number && this.contacts.find(c => c.Phone.Number !== user.Phone.Number));
+          const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number && !this.contacts.find(c => c.Phone.Number === user.Phone.Number));
+
+          if (validUsers.length === 0) return;
+
           const country = Util.GetCountryByCode(currentUser.CountryCode);
           const newContacts = [];
-          deviceContacts.forEach(contact => {
+          deviceContacts.some(contact => {
             if (contact.phoneNumbers) {
-              contact.phoneNumbers.forEach(phone => {
-                validUsers.forEach((user, index) => {
+              return contact.phoneNumbers.some(phone => {
+                return validUsers.some((user, index) => {
                   let num = user.Phone.Number;
                   if (!phone.value.startsWith(country.countryCallingCodes[0]))
                     num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
@@ -229,14 +233,14 @@ export class ContactsComponent {
                     user.photo = contact.photos && contact.photos.length > 0 ? contact.photos[0].value : "";
                     loadingPhotoPromises.push(this.loadContactAvatar(user));
                     newContacts.push(user);
-                    validUsers.splice(index);
-                    if (validUsers.length === 0)
-                      return Promise.all(loadingPhotoPromises).then(() => this.showNewContacts(newContacts));
+                    validUsers.splice(index, 1);
+                    return validUsers.length === 0;
                   }
                 });
               });
             }
           });
+          Promise.all(loadingPhotoPromises).then(() => this.showNewContacts(newContacts));
         })
         .catch(reason => alert("Error loading contacts: " + reason.error));
     });
@@ -258,19 +262,25 @@ export class ContactsComponent {
       const currentUser = this.settings.getUser();
       const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number);
       const country = Util.GetCountryByCode(currentUser.CountryCode);
-      deviceContacts.forEach(contact => {
+
+      if (validUsers.length === 0) return;
+
+      deviceContacts.some(contact => {
         if (contact.phoneNumbers) {
-          contact.phoneNumbers.forEach(phone => {
-            validUsers.forEach(user => {
+          return contact.phoneNumbers.some(phone => {
+            return validUsers.some((user, index) => {
               let num = user.Phone.Number;
               if (!phone.value.startsWith(country.countryCallingCodes[0]))
                 num = user.Phone.Number.replace(country.countryCallingCodes[0], 0);
 
-              if (!localContacts.find(c => c.Phone.Number !== num))
+              if (!localContacts.find(c => c.Phone.Number === num))
                 if (phone.value.replace(/\s/g, '') === num) {
                   user.photo = contact.photos && contact.photos.length > 0 ? contact.photos[0].value : "";
                   loadingPhotoPromises.push(this.loadContactAvatar(user));
                   localContacts.push(user);
+
+                  validUsers.splice(index, 1);
+                  return validUsers.length === 0;
                 }
             });
           });
@@ -297,8 +307,17 @@ export class ContactsComponent {
             fileReader.readAsDataURL(file);
           }, error => {
             alert(error);
+            resolve();
           });
-        }, error => alert(`Error in: resolveLocalFileSystemURL: ${error.code}`));
+        }, error => {
+          if (error.code === 1)
+            console.log("no photo found with this url");
+          else
+            alert(`Error in: resolveLocalFileSystemURL: ${error.code}`);
+          resolve();
+        });
+      } else {
+        resolve();
       }
     }
     return new Promise(executor);
@@ -330,7 +349,7 @@ export class ContactsComponent {
   private showNewContacts(newContacts: any[]) {
     const alert = this.alert.create({
       title: `We have found ${newContacts.length} new contacts`,
-      message: "Do you want to add them in your list? ",
+      message: "Do you want to add them in your list?",
       buttons: [
         {
           text: "Cancel",

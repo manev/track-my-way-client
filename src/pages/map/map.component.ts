@@ -16,6 +16,10 @@ export class MapComponent implements OnInit {
   private backButtonHandler;
   private isDisposed = false;
   private zoom = 17;
+  private userAvatar;
+  private isMapDragged = false;
+  private lastLat;
+  private lastLong;
 
   @ViewChild("mapHost") mapHost;
   @ViewChild("bntZoomIn") bntZoomIn;
@@ -69,17 +73,23 @@ export class MapComponent implements OnInit {
   private initMap(div) {
     let isLoaded = false;
     let isAnimationInProgress = false;
-    let isMapDragged = false;
 
     this.map = plugin.google.maps.Map.getMap();
-    this.map.addEventListener(plugin.google.maps.event.CAMERA_CHANGE, args => {
+    const mapMoveHandler = args => {
       if (isLoaded) {
         this.zoom = args.zoom;
-        //isMapDragged = true;
-      }
-    });
+        const lat = args.target.lat.toFixed(5);
+        const lng = args.target.lng.toFixed(5);
 
-    this.map.on(plugin.google.maps.event.MAP_READY, () => {
+        if (lat !== this.lastLat.toFixed(5) || this.lastLong.toFixed(5) !== lng) {
+          this.isMapDragged = true;
+        }
+      }
+    };
+
+    this.map.addEventListener(plugin.google.maps.event.CAMERA_CHANGE, mapMoveHandler);
+
+    this.map.addEventListener(plugin.google.maps.event.MAP_READY, () => {
       this.map.setDiv(div);
       //this.map.setClickable(false);
       this.map.setMyLocationEnabled(true);
@@ -98,19 +108,22 @@ export class MapComponent implements OnInit {
       if (!isLoaded) {
         isAnimationInProgress = true;
       }
-      var _position = position.Geopoint.Position;
-      var pos = new plugin.google.maps.LatLng(_position.Latitude, _position.Longitude);
-      var cameraSettings = {
-        'target': pos,
-        'tilt': 0,
-        'zoom': this.zoom,
-        'bearing': 140
-      };
+      const _position = position.Geopoint.Position;
+      this.lastLat = _position.Latitude;
+      this.lastLong = _position.Longitude;
 
-      if (!isAnimationInProgress && isLoaded && !isMapDragged) {
-        this.map.moveCamera(cameraSettings);
+      const pos = new plugin.google.maps.LatLng(_position.Latitude, _position.Longitude);
+
+      if (!isAnimationInProgress && isLoaded && !this.isMapDragged) {
+        this.moveCameraMap(this.lastLat, this.lastLong);
       }
-      else if (!isMapDragged) {
+      else if (!this.isMapDragged) {
+        const cameraSettings = {
+          'target': pos,
+          'tilt': 0,
+          'zoom': this.zoom,
+          'bearing': 140
+        };
         this.map.animateCamera(cameraSettings, () => {
           isLoaded = true;
           isAnimationInProgress = false;
@@ -118,7 +131,34 @@ export class MapComponent implements OnInit {
       }
 
       this.map.clear();
+      if (this.userAvatar)
+        this.map.addMarker({
+          position: pos,
+          styles: {
+            "maxWidth": "80%",
+            "text-align": "center"
+          },
+          title: this.contact.FirstName,
+          icon: this.userAvatar
+        }, marker => marker.showInfoWindow());
+      else
+        this.getUserImage().then(icon => {
+          this.userAvatar = icon;
+          this.map.addMarker({
+            position: pos,
+            styles: {
+              "maxWidth": "80%",
+              "text-align": "center"
+            },
+            title: this.contact.FirstName,
+            icon: icon
+          }, marker => marker.showInfoWindow());
+        });
+    });
+  }
 
+  private getUserImage(): Promise<string> {
+    const executor = (resolve) => {
       const canvas = document.createElement("canvas");
       canvas.width = 65;
       canvas.height = 60;
@@ -144,17 +184,26 @@ export class MapComponent implements OnInit {
         context.closePath();
         context.restore();
 
-        this.map.addMarker({
-          position: pos,
-          styles: {
-            "maxWidth": "80%",
-            "text-align": "center"
-          },
-          title: this.contact.FirstName,
-          icon: canvas.toDataURL("image/png")
-        }, marker => marker.showInfoWindow());
-      };
-    });
+        resolve(canvas.toDataURL("image/png"));
+      }
+    };
+    return new Promise(executor);
+  }
+
+  private moveToTarget() {
+    this.isMapDragged = false;
+    this.moveCameraMap(this.lastLat, this.lastLong);
+  }
+
+  private moveCameraMap(lat, lng) {
+    const pos = new plugin.google.maps.LatLng(lat, lng);
+    const cameraSettings = {
+      'target': pos,
+      'tilt': 0,
+      'zoom': this.zoom,
+      'bearing': 140
+    };
+    this.map.moveCamera(cameraSettings);
   }
 
   private positionChanged(latitude, longitude) {
