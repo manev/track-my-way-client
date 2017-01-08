@@ -240,7 +240,8 @@ export class ContactsComponent {
               });
             }
           });
-          Promise.all(loadingPhotoPromises).then(() => this.showNewContacts(newContacts));
+          if (newContacts.length > 0)
+            Promise.all(loadingPhotoPromises).then(() => this.showNewContacts(newContacts));
         })
         .catch(reason => alert("Error loading contacts: " + reason.error));
     });
