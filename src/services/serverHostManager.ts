@@ -72,14 +72,12 @@ export class ServerHostManager {
 
   addTrackingListener(callback) {
     const currentUser = this.settings.getUser();
-    //const requestUserEvent = currentUser.Phone.Number + "-request-user-event";
     const requestUserEvent = "request-user-event";
     this.on(requestUserEvent, callback);
   }
 
   removeTrackingListener() {
     const currentUser = this.settings.getUser();
-    //const requestUserEvent = currentUser.Phone.Number + "-request-user-event";
     const requestUserEvent = "request-user-event";
     this.socket.off(requestUserEvent);
   }

@@ -116,10 +116,11 @@ body {
 }
 
 .zoom-button {
-  opacity: .7;
   background: whitesmoke;
-  width: 45px;
-  height: 45px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  opacity: .8
 }
 
 [google-map] {

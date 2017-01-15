@@ -208,7 +208,7 @@ export class ContactsComponent {
     });
 
     this.serverHost.getAllRegisteredUsers().subscribe((users: any) => {
-      users.forEach(user => this.contacts.forEach(c =>
+      users.forEach(user => _contacts.forEach(c =>
         c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline
       ));
 

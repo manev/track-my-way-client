@@ -1,5 +1,5 @@
 import { Platform, AlertController, MenuController, Alert, LoadingController } from 'ionic-angular';
-import { Diagnostic, StatusBar, Device, BackgroundGeolocation, Insomnia, Splashscreen } from 'ionic-native';
+import { Diagnostic, StatusBar, Device, Geolocation, Insomnia, Splashscreen, BackgroundMode, BackgroundGeolocation, LocalNotifications } from 'ionic-native';
 import { ViewChild, Component } from "@angular/core";
 
 import { localDeviceSettings } from "../services/localDeviceSettings";
@@ -37,7 +37,8 @@ export class MyApp {
           this.configNetworkService();
           this.configLocationService();
           this.configResume();
-          //this.configBackButton();
+          this.configBackgroundMode();
+          this.configBackButton();
           this.configLogListener();
         }
       });
@@ -45,7 +46,6 @@ export class MyApp {
   }
 
   onEnableBackgroundMode() {
-    //BackgroundMode.enable();
     this.menu.close();
   }
 
@@ -85,7 +85,7 @@ export class MyApp {
             alert.dismiss();
             this.serverHost.disconnect();
           }
-        }],
+        }]
       });
       alert.present();
     }, 100);
@@ -176,5 +176,16 @@ export class MyApp {
         }
       })
       .catch(error => alert(`BackgroundGeolocation.isLocationEnabled error: ${error}`));
+  }
+
+  private configBackgroundMode() {
+    // if (!BackgroundMode.isEnabled()) {
+    //   BackgroundMode.setDefaults({
+    //     title: "TrackMyWay title",
+    //     ticker: "TrackMyWay is now running in background mode",
+    //     text: "TrackMyWay text"
+    //   });
+    //   BackgroundMode.enable();
+    // }
   }
 }
