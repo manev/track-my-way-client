@@ -2,6 +2,8 @@ node_modules/
 platforms/
 www/build/css/*
 www/build/js/*
+src/**/*.js
+src/**/*.js.map
 
 *~
 *.sw[mnpcod]

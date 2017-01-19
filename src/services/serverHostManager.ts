@@ -10,7 +10,7 @@ declare var io: any;
 
 @Injectable()
 export class ServerHostManager {
-  private liveUrl = "http://whereru-kokata.rhcloud.com:8000";
+  private liveUrl = "ws://192.168.1.121:8081";
   private localhost = "ws://192.168.1.121:8081";
   private socket;
   private usersObservable: Observable<Array<User>>;
