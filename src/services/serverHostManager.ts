@@ -10,13 +10,12 @@ declare var io: any;
 
 @Injectable()
 export class ServerHostManager {
-  private liveUrl = "ws://192.168.1.121:8081";
-  private localhost = "ws://192.168.1.121:8081";
+  private liveUrl = "http://whereru-kokata.rhcloud.com:8000";
   private socket;
   private usersObservable: Observable<Array<User>>;
 
   constructor(private settings: localDeviceSettings) {
-    // this.liveUrl = this.localhost;
+    // this.liveUrl = "ws://192.168.1.100:8081";
     this.socket = io(this.liveUrl, {
       reconnection: true,
       reconnectionDelay: 1000,
@@ -71,15 +70,9 @@ export class ServerHostManager {
   }
 
   addTrackingListener(callback) {
-    const currentUser = this.settings.getUser();
     const requestUserEvent = "request-user-event";
     this.on(requestUserEvent, callback);
-  }
-
-  removeTrackingListener() {
-    const currentUser = this.settings.getUser();
-    const requestUserEvent = "request-user-event";
-    this.socket.off(requestUserEvent);
+    return () => this.socket.off(requestUserEvent);
   }
 
   trackingResponse(callback) {
@@ -88,10 +81,14 @@ export class ServerHostManager {
       let res = JSON.parse(result);
       callback(res);
     });
+
+    return () => this.socket.off("request-user-event-result")
   }
 
-  stopRequestTracking() {
-    this.socket.off("request-user-event-result");
+  addUserHasRequestNotifier(callback: Function) {
+    this.on("user-has-request-started", result => callback(JSON.parse(result)));
+
+    return () => this.socket.off("user-has-request-started");
   }
 
   sendTrackingResponse(sender, isAccepted) {
@@ -141,10 +138,14 @@ export class ServerHostManager {
     this.emit("disconnect");
   }
 
-  onUserDisconnect(callback: Function) {
+  onUserDisconnect(callback: Function): Function {
     this.on("disonnect-user", user => {
       callback(JSON.parse(user));
     });
+
+    return () => {
+      this.socket.off("disonnect-user");
+    }
   }
 
   emitPushRegKey(key: string) {

@@ -80,4 +80,6 @@
     <variable name="ALWAYS_USAGE_DESCRIPTION" value="This app requires background tracking enabled"/>
   </plugin>
   <icon src="resources\android\icon\drawable-xhdpi-icon.png"/>
+  <allow-navigation href="http://192.168.1.100:8100"/>
+  <allow-navigation href="http://192.168.1.101:8100"/>
 </widget>

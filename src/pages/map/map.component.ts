@@ -1,6 +1,6 @@
 import { OnInit, Component, ViewChild } from "@angular/core";
 import { NavController, NavParams, ViewController, Platform } from 'ionic-angular';
-import { BackgroundGeolocation, Geolocation, BackgroundMode } from 'ionic-native';
+import { BackgroundGeolocation, Geolocation } from 'ionic-native';
 
 import { ServerHostManager } from "../../services/serverHostManager";
 
@@ -21,6 +21,7 @@ export class MapComponent implements OnInit {
   private lastLat;
   private lastLong;
   private isPaused = false;
+  private clearUserDisconnect;
 
   @ViewChild("mapHost") mapHost;
   @ViewChild("bntZoomIn") bntZoomIn;
@@ -36,7 +37,7 @@ export class MapComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.serverHost.onUserDisconnect(this.onUserDisconnect.bind(this));
+    this.clearUserDisconnect = this.serverHost.onUserDisconnect(this.onUserDisconnect.bind(this));
     this.serverHost.onStopUserTrackRecieved(this.onUserDisconnect.bind(this));
 
     this.loadGoogleMap();
@@ -59,6 +60,11 @@ export class MapComponent implements OnInit {
     event.preventDefault();
   }
 
+  moveToTarget() {
+    this.isMapDragged = false;
+    this.moveCameraMap(this.lastLat, this.lastLong);
+  }
+
   private loadGoogleMap() {
     this.isResponseWaiting = false;
     plugin.google.maps.Map.isAvailable((isAvailable, message) => {
@@ -72,12 +78,12 @@ export class MapComponent implements OnInit {
   private initMap(div) {
     this.map = plugin.google.maps.Map.getMap();
     const mapMoveHandler = args => {
-      const lat = args.target.lat.toFixed(5);
-      const lng = args.target.lng.toFixed(5);
+      const lat = args.target.lat.toFixed(0);
+      const lng = args.target.lng.toFixed(0);
 
       if (!this.lastLat || !this.lastLong) return;
 
-      if (lat !== this.lastLat.toFixed(5) || this.lastLong.toFixed(5) !== lng) {
+      if (lat !== this.lastLat.toFixed(0) || this.lastLong.toFixed(0) !== lng) {
         this.zoom = args.zoom;
         this.isMapDragged = true;
       }
@@ -193,11 +199,6 @@ export class MapComponent implements OnInit {
     return new Promise(executor);
   }
 
-  private moveToTarget() {
-    this.isMapDragged = false;
-    this.moveCameraMap(this.lastLat, this.lastLong);
-  }
-
   private moveCameraMap(lat, lng) {
     const pos = new plugin.google.maps.LatLng(lat, lng);
     const cameraSettings = {
@@ -211,7 +212,10 @@ export class MapComponent implements OnInit {
 
   private positionChanged(latitude, longitude) {
     let payload = { Geopoint: { Position: { Latitude: latitude, Longitude: longitude } } };
-    this.serverHost.sendPosition([this.contact], payload);
+    const user = Object.assign({}, this.contact);
+    delete user.photoAsDataUrl;
+    delete user.photo;
+    this.serverHost.sendPosition([user], payload);
   }
 
   private configBackButton() {
@@ -232,6 +236,7 @@ export class MapComponent implements OnInit {
   }
 
   private onUserDisconnect(user) {
+    this.clearUserDisconnect();
     var message = user.FirstName + " has been disconnected.";
     navigator.notification.alert(message, () => {
       this.dispose();
@@ -251,6 +256,7 @@ export class MapComponent implements OnInit {
 
     this.isDisposed = true;
     this.serverHost.removeStopUserTrackRecieved();
+    this.clearUserDisconnect();
 
     if (this.map)
       this.map.remove();

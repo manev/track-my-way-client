@@ -1,5 +1,5 @@
 import { Platform, AlertController, MenuController, Alert, LoadingController } from 'ionic-angular';
-import { Diagnostic, StatusBar, Device, Geolocation, Insomnia, Splashscreen, BackgroundMode, BackgroundGeolocation, LocalNotifications } from 'ionic-native';
+import { Diagnostic, StatusBar, Device, Insomnia, Splashscreen, BackgroundMode, BackgroundGeolocation } from 'ionic-native';
 import { ViewChild, Component } from "@angular/core";
 
 import { localDeviceSettings } from "../services/localDeviceSettings";
@@ -16,6 +16,7 @@ export class MyApp {
   @ViewChild("navHost") nav;
 
   private alertLocation: Alert;
+  private exitAlert: Alert;
 
   constructor(
     private platform: Platform,
@@ -72,7 +73,9 @@ export class MyApp {
 
   private configBackButton() {
     this.platform.registerBackButtonAction(() => {
-      const alert = this.alertController.create({
+      if (this.exitAlert) return;
+
+      this.exitAlert = this.alertController.create({
         title: "Exit",
         subTitle: "Are you sure you want to exit?",
         buttons: [{
@@ -82,12 +85,12 @@ export class MyApp {
         {
           text: "Cancel",
           handler: () => {
-            alert.dismiss();
-            this.serverHost.disconnect();
+            this.exitAlert.dismiss();
+            this.exitAlert = null;
           }
         }]
       });
-      alert.present();
+      this.exitAlert.present();
     }, 100);
   }
 

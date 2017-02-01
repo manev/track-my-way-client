@@ -1,6 +1,6 @@
 import { Component } from "@angular/core";
 import { DomSanitizer } from '@angular/platform-browser';
-import { NavController, AlertController, LoadingController, ActionSheetController, Loading, Platform } from 'ionic-angular';
+import { NavController, AlertController, LoadingController, ActionSheetController, Loading, Platform, ActionSheet } from 'ionic-angular';
 import { Contacts, Device } from "ionic-native";
 
 import { ServerHostManager } from "../../services/serverHostManager";
@@ -28,12 +28,14 @@ export class ContactsComponent {
 
   contacts = Array<User>();
 
+  private actionSheetInstance: ActionSheet;
+  private clearTrackListener;
   private isInSession = false;
   private fieldType = navigator.contacts.fieldType;
   private fields = [this.fieldType.id, this.fieldType.displayName, this.fieldType.phoneNumbers, this.fieldType.name, this.fieldType.photos];
 
   openActionSheet(contact) {
-    const actionSheet = this.actionSheet.create({
+    this.actionSheetInstance = this.actionSheet.create({
       cssClass: 'action-sheets-basic-page',
       buttons: [
         {
@@ -56,7 +58,7 @@ export class ContactsComponent {
         }
       ]
     });
-    actionSheet.present();
+    this.actionSheetInstance.present();
   }
 
   onPush(contact) {
@@ -64,7 +66,7 @@ export class ContactsComponent {
   }
 
   ionViewDidEnter() {
-    this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
+    this.clearTrackListener = this.serverHost.addTrackingListener(this.onTrackingRequestRecieved.bind(this));
   }
 
   ionViewDidLoad() {
@@ -91,25 +93,43 @@ export class ContactsComponent {
       prompt.present();
       return;
     }
-
     const loading = this.showLoading("Waiting for contact response...");
 
-    this.serverHost.trackingResponse(requestResult => {
+    let removeHandler = this.serverHost.trackingResponse(requestResult => {
       loading.dismiss();
 
       if (requestResult.IsAccepted) {
-        this.serverHost.removeTrackingListener();
+        this.clearTrackListener();
         this.nav.push(MapComponent, { contact: contact });
       } else {
         const prompt = this.alert.create({ title: "Warning!", subTitle: "User refused to track you!", buttons: ['OK'] });
         prompt.present();
       }
-      this.serverHost.stopRequestTracking();
+      removeHandler();
     });
-    this.serverHost.requestTracking(contact);
+
+    const clearUserHasRequest = this.serverHost.addUserHasRequestNotifier(user => {
+      loading.dismiss();
+      removeHandler();
+      clearUserHasRequest();
+
+      this.alert.create({
+        title: "Warning!",
+        subTitle: `User ${user.FirstName} is currently in session`,
+        buttons: ['OK']
+      }).present();
+    });
+
+    const user = Object.assign({}, contact);
+    delete user.photoAsDataUrl;
+    delete user.photo;
+    this.serverHost.requestTracking(user);
   }
 
   private onTrackingRequestRecieved(sender) {
+    if (this.actionSheetInstance)
+      this.actionSheetInstance.dismiss();
+
     let that = this;
     let user = <User>JSON.parse(sender);
     const prompt = this.alert.create({
@@ -120,9 +140,8 @@ export class ContactsComponent {
         handler: data => {
           this.isInSession = true;
           this.serverHost.sendTrackingResponse(user, true);
-          this.serverHost.removeTrackingListener();
+          this.clearTrackListener();
           this.nav.push(MapComponent, { contact: that.contacts.find(c => c.Phone.Number === user.Phone.Number) });
-          //this.nav.setRoot(MapComponent, { contact: user });
         }
       }, {
         text: 'Cancel',
