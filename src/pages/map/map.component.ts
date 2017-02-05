@@ -1,6 +1,6 @@
 import { OnInit, Component, ViewChild } from "@angular/core";
 import { NavController, NavParams, ViewController, Platform } from 'ionic-angular';
-import { BackgroundGeolocation, Geolocation } from 'ionic-native';
+import { BackgroundGeolocation, Geolocation, Network } from 'ionic-native';
 
 import { ServerHostManager } from "../../services/serverHostManager";
 
@@ -22,6 +22,8 @@ export class MapComponent implements OnInit {
   private lastLong;
   private isPaused = false;
   private clearUserDisconnect;
+  private lastReportedLat;
+  private lastReportedLong;
 
   @ViewChild("mapHost") mapHost;
   @ViewChild("bntZoomIn") bntZoomIn;
@@ -44,6 +46,8 @@ export class MapComponent implements OnInit {
     this.configBackButton();
     this.configPlatformPause();
     this.configPlatformResume();
+
+    Network.onConnect().subscribe(() => this.serverHost.emitLoginUser());
   }
 
   ngOnDestroy() {
@@ -78,25 +82,27 @@ export class MapComponent implements OnInit {
   private initMap(div) {
     this.map = plugin.google.maps.Map.getMap();
     const mapMoveHandler = args => {
-      const lat = args.target.lat.toFixed(0);
-      const lng = args.target.lng.toFixed(0);
 
       if (!this.lastLat || !this.lastLong) return;
 
-      if (lat !== this.lastLat.toFixed(0) || this.lastLong.toFixed(0) !== lng) {
+      const lat = args.target.lat.toFixed(3);
+      const lng = args.target.lng.toFixed(3);
+      const lastLat = this.lastLat.toFixed(3);
+      const lastLong = this.lastLong.toFixed(3);
+
+      if (lat !== lastLat || lng !== lastLong) {
         this.zoom = args.zoom;
         this.isMapDragged = true;
       }
     };
-
-    this.map.addEventListener(plugin.google.maps.event.CAMERA_CHANGE, mapMoveHandler);
 
     this.map.addEventListener(plugin.google.maps.event.MAP_READY, () => {
       this.map.setDiv(div);
       //this.map.setClickable(false);
       //this.map.setMyLocationEnabled(true);
       this.map.refreshLayout();
-      this.configBackgroundLocation();
+      this.map.addEventListener(plugin.google.maps.event.CAMERA_CHANGE, mapMoveHandler);
+      //this.configBackgroundLocation();
     });
 
     this.watchPositionHandler = Geolocation.watchPosition({ timeout: 60000, enableHighAccuracy: false })
@@ -122,13 +128,20 @@ export class MapComponent implements OnInit {
         this.moveCameraMap(this.lastLat, this.lastLong);
 
       this.map.clear();
-      if (this.userAvatar)
+      if (this.userAvatar) {
         this.map.addMarker({
           position: pos,
           styles: { "maxWidth": "80%", "text-align": "center" },
           title: this.contact.FirstName,
           icon: this.userAvatar
         }, marker => marker.showInfoWindow());
+
+        this.map.addMarker({
+          position: new plugin.google.maps.LatLng(this.lastReportedLat, this.lastReportedLong),
+          styles: { "maxWidth": "80%", "text-align": "center" },
+          title: "Me",
+        }, marker => marker.showInfoWindow());
+      }
       else
         this.getUserImage().then(icon => {
           this.userAvatar = icon;
@@ -211,11 +224,16 @@ export class MapComponent implements OnInit {
   }
 
   private positionChanged(latitude, longitude) {
-    let payload = { Geopoint: { Position: { Latitude: latitude, Longitude: longitude } } };
-    const user = Object.assign({}, this.contact);
-    delete user.photoAsDataUrl;
-    delete user.photo;
-    this.serverHost.sendPosition([user], payload);
+    if (this.lastReportedLat !== latitude.toFixed(3) || this.lastReportedLong !== longitude.toFixed(3) || true) {
+      this.lastReportedLat = latitude.toFixed(3);
+      this.lastReportedLong = longitude.toFixed(3);
+
+      let payload = { Geopoint: { Position: { Latitude: latitude, Longitude: longitude } } };
+      const user = Object.assign({}, this.contact);
+      delete user.photoAsDataUrl;
+      delete user.photo;
+      this.serverHost.sendPosition([user], payload);
+    }
   }
 
   private configBackButton() {
@@ -227,12 +245,6 @@ export class MapComponent implements OnInit {
         }
       }, "Disconnect?", ["Cancel", "<< Go back"]);
     }, 101);
-  }
-
-  private configPlatformPause() {
-    this.platform.pause.subscribe(() => {
-      this.isPaused = true;
-    });
   }
 
   private onUserDisconnect(user) {
@@ -247,6 +259,12 @@ export class MapComponent implements OnInit {
   private configPlatformResume() {
     this.platform.resume.subscribe(() => {
       this.isPaused = false;
+    });
+  }
+
+  private configPlatformPause() {
+    this.platform.pause.subscribe(() => {
+      this.isPaused = true;
     });
   }
 
@@ -266,7 +284,11 @@ export class MapComponent implements OnInit {
 
     this.backButtonHandler();
 
+    const user = Object.assign({}, this.contact);
+    delete user.photoAsDataUrl;
+    delete user.photo;
+
     this.serverHost.disconnectPositionRecieved();
-    this.serverHost.stopTracking(this.contact);
+    this.serverHost.stopTracking(user);
   }
 }

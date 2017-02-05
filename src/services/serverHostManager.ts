@@ -15,7 +15,7 @@ export class ServerHostManager {
   private usersObservable: Observable<Array<User>>;
 
   constructor(private settings: localDeviceSettings) {
-    // this.liveUrl = "ws://192.168.1.100:8081";
+    //this.liveUrl = "ws://192.168.1.104:8081";
     this.socket = io(this.liveUrl, {
       reconnection: true,
       reconnectionDelay: 1000,
@@ -23,7 +23,6 @@ export class ServerHostManager {
       reconnectionAttempts: 5
     });
     this.socket.on("disconnect", () => {
-      debugger;
       console.log("disconnected to server");
     });
   }
@@ -75,14 +74,13 @@ export class ServerHostManager {
     return () => this.socket.off(requestUserEvent);
   }
 
-  trackingResponse(callback) {
-    this.on("request-user-event-result", result => {
+  addResponseListener(callback) {
+    const eventName = "request-user-event-result";
+    this.on(eventName, result => {
       if (result == null) return;
-      let res = JSON.parse(result);
-      callback(res);
+      callback(JSON.parse(result));
     });
-
-    return () => this.socket.off("request-user-event-result")
+    return () => this.socket.off(eventName)
   }
 
   addUserHasRequestNotifier(callback: Function) {

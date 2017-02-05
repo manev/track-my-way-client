@@ -1,6 +1,17 @@
-import { Platform, AlertController, MenuController, Alert, LoadingController } from 'ionic-angular';
-import { Diagnostic, StatusBar, Device, Insomnia, Splashscreen, BackgroundMode, BackgroundGeolocation } from 'ionic-native';
-import { ViewChild, Component } from "@angular/core";
+import { Platform, AlertController, MenuController, Alert, LoadingController } from "ionic-angular";
+import {
+  Diagnostic,
+  StatusBar,
+  Device,
+  Insomnia,
+  Splashscreen,
+  BackgroundMode,
+  LocationAccuracy,
+  BackgroundGeolocation,
+  Network,
+  Toast
+} from "ionic-native";
+import { ViewChild, Component, NgZone } from "@angular/core";
 
 import { localDeviceSettings } from "../services/localDeviceSettings";
 import { RegistrationComponent } from "../pages/registration/register.component";
@@ -15,11 +26,14 @@ declare var navigator: any;
 export class MyApp {
   @ViewChild("navHost") nav;
 
+  public hasInternet: boolean;
+
   private alertLocation: Alert;
   private exitAlert: Alert;
 
   constructor(
     private platform: Platform,
+    private zone: NgZone,
     private localSettings: localDeviceSettings,
     private menu: MenuController,
     private serverHost: ServerHostManager,
@@ -36,11 +50,12 @@ export class MyApp {
         } else {
           this.configInsomnia();
           this.configNetworkService();
-          this.configLocationService();
+          this.requestLocationAccuracy();
           this.configResume();
           this.configBackgroundMode();
           this.configBackButton();
           this.configLogListener();
+          this.configureNetworkListener();
         }
       });
     });
@@ -69,6 +84,19 @@ export class MyApp {
 
     this.serverHost.sendPing();
     this.menu.close();
+  }
+
+  private requestLocationAccuracy() {
+    LocationAccuracy.canRequest().then(
+      value => {
+        if (value)
+          LocationAccuracy.request(LocationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY).then(
+            () => this.bootstrapp(),
+            () => this.configLocationService()
+          );
+        else
+          this.configLocationService();
+      });
   }
 
   private configBackButton() {
@@ -179,6 +207,23 @@ export class MyApp {
         }
       })
       .catch(error => alert(`BackgroundGeolocation.isLocationEnabled error: ${error}`));
+  }
+
+  private configureNetworkListener() {
+    let timeInterval;
+
+    this.hasInternet = Network.type !== "offline";
+
+    Network.onDisconnect().subscribe(() => {
+      this.zone.run(() => this.hasInternet = false);
+      timeInterval = setInterval(() => Toast.showShortCenter("No internet connection!").subscribe(), 500);
+    });
+
+    Network.onConnect().subscribe(() => {
+      this.zone.run(() => this.hasInternet = true);
+      Toast.hide();
+      clearInterval(timeInterval);
+    });
   }
 
   private configBackgroundMode() {

@@ -71,10 +71,10 @@ export class ContactsComponent {
 
   ionViewDidLoad() {
     this.serverHost.onUserDisconnect((user: User) => {
-      this.contacts.forEach(contact => {
+      this.contacts.some(contact => {
         if (contact.Phone.Number === user.Phone.Number) {
           contact.IsOnline = false;
-          return;
+          return true;
         }
       });
     });
@@ -88,36 +88,29 @@ export class ContactsComponent {
   }
 
   private startTracking(contact) {
-    if (!contact.IsOnline) {
-      const prompt = this.alert.create({ title: "Warning!", subTitle: "User is offline", buttons: ['OK'] });
-      prompt.present();
-      return;
-    }
     const loading = this.showLoading("Waiting for contact response...");
-
-    let removeHandler = this.serverHost.trackingResponse(requestResult => {
+    const removeResponseListenerHandler = this.serverHost.addResponseListener(requestResult => {
       loading.dismiss();
 
       if (requestResult.IsAccepted) {
         this.clearTrackListener();
         this.nav.push(MapComponent, { contact: contact });
       } else {
-        const prompt = this.alert.create({ title: "Warning!", subTitle: "User refused to track you!", buttons: ['OK'] });
-        prompt.present();
+        this.alert.create({ title: "Warning!", subTitle: "User refused to track you!", buttons: ['OK'] }).present();
       }
-      removeHandler();
+      removeResponseListenerHandler();
     });
 
     const clearUserHasRequest = this.serverHost.addUserHasRequestNotifier(user => {
       loading.dismiss();
-      removeHandler();
+      removeResponseListenerHandler();
       clearUserHasRequest();
 
-      this.alert.create({
-        title: "Warning!",
-        subTitle: `User ${user.FirstName} is currently in session`,
-        buttons: ['OK']
-      }).present();
+      // this.alert.create({
+      //   title: "Warning!",
+      //   subTitle: `User ${user.FirstName} is currently in session`,
+      //   buttons: ['OK']
+      // }).present();
     });
 
     const user = Object.assign({}, contact);
