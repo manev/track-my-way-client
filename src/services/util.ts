@@ -1,7 +1,7 @@
 export default class Util {
 	static GetTemplateUri(path:string): string {
-		return `build/pages/${path}/${path}.html`;	
-	} 
+		return `build/pages/${path}/${path}.html`;
+	}
 
 	static GetAllCountries() {
 		return [

@@ -1,13 +1,14 @@
+import { LoadingDialogService } from './../../services/loading.service';
 import { OnInit, Component, ViewChild } from "@angular/core";
 import { Http } from "@angular/http";
 import { NavController } from 'ionic-angular';
 import { Keyboard, Geolocation } from "ionic-native";
-
 import { ServerHostManager } from "../../services/serverHostManager";
 import { localDeviceSettings } from "../../services/localDeviceSettings";
 import Util from "../../services/util";
 import { User } from "../../services/user";
 import { ContactsComponent } from "../contacts/contacts.component";
+import { PushNotificationService } from "../../services/push-notification.service";
 
 declare var navigator: any;
 
@@ -16,12 +17,16 @@ export class RegistrationComponent implements OnInit {
 
   @ViewChild("name") nameInput;
 
-  public isLoading;
+  user = new User();
+  countriesInfo: any;
+  isLoading;
 
   constructor(
     private serverHost: ServerHostManager,
     private settings: localDeviceSettings,
     private http: Http,
+    private loadingDialog: LoadingDialogService,
+    private pushService: PushNotificationService,
     private nav: NavController) { }
 
   ngOnInit() {
@@ -60,7 +65,23 @@ export class RegistrationComponent implements OnInit {
     this.countriesInfo = Util.GetAllCountries().sort((item1, item2) => item1.name.localeCompare(item2.name));
   }
 
-  // ionViewDidEnter() { }
+  register() {
+    const country = this.countriesInfo.filter(item => item.alpha2 === this.user.CountryCode)[0];
+    const loadingIndicator = this.loadingDialog.showLoading("Registering user");
+
+    this.user.Phone.Number = country.countryCallingCodes[0] + this.user.Phone.Number;
+
+    this.pushService.getIds().then(data => {
+      this.user.PushId = data.userId;
+      this.serverHost.registerUser(this.user, response => {
+        if (response.status === "Ok") {
+          loadingIndicator.dismiss();
+          this.settings.setCurrentUser(this.user);
+          this.nav.setRoot(ContactsComponent);
+        }
+      });
+    });
+  }
 
   private setNameInputFocus() {
     setTimeout(() => {
@@ -68,16 +89,4 @@ export class RegistrationComponent implements OnInit {
       Keyboard.show();
     }, 150);
   }
-
-  register() {
-    let country = this.countriesInfo.filter(item => item.alpha2 === this.user.CountryCode)[0];
-
-    this.user.Phone.Number = country.countryCallingCodes[0] + this.user.Phone.Number;
-    this.settings.setCurrentUser(this.user);
-    this.serverHost.registerUser();
-    this.nav.setRoot(ContactsComponent);
-  }
-
-  user = new User();
-  countriesInfo: any;
 }

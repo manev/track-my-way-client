@@ -10,6 +10,8 @@ import { ContactsComponent } from "./../pages/contacts/contacts.component";
 import { MapComponent } from "./../pages/map/map.component";
 import { localDeviceSettings } from "../services/localDeviceSettings";
 import { ServerHostManager } from "../services/serverHostManager";
+import { PushNotificationService } from "../services/push-notification.service";
+import { LoadingDialogService } from "../services/loading.service";
 
 @NgModule({
   declarations: [MyApp, RegistrationComponent, ContactsComponent, MapComponent],
@@ -19,6 +21,8 @@ import { ServerHostManager } from "../services/serverHostManager";
   providers: [
     localDeviceSettings,
     ServerHostManager,
+    PushNotificationService,
+    LoadingDialogService,
     { provide: ErrorHandler, useClass: AppErrorHandler }]
 })
 export class AppModule {

@@ -11,40 +11,42 @@
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-
 <ion-content>
   <div class="root">
     <div class="contacts" *ngIf="contacts.length === 0">
       No contacts found.
     </div>
-    <ion-list no-lines>
-      <ion-item *ngFor="let contact of contacts" class="margin-top-minus-5">
-        <ion-row>
-          <ion-col *ngIf="contact.photoAsDataUrl" width-20 center class="margin-top-5">
-            <img class="img-round" width="55px" height="55px" [src]="contact.photoAsDataUrl" />
-          </ion-col>
-          <ion-col center>
-            <div>
-              {{ contact.FirstName }}
-              <p style="font-size: 11px; margin: 5px 5px">{{ contact.Phone.Number }}</p>
-            </div>
-          </ion-col>
-          <ion-col center>
-            <div>
-              <button ion-button small outline class="button button-positive button-width-100" (click)="openActionSheet(contact)" [disabled]="!contact.IsOnline">
-                  <span *ngIf="contact.IsOnline">share &nbsp;&nbsp;&nbsp;&nbsp;</span>
-                  <span *ngIf="!contact.IsOnline">offline</span>
-                  <ion-icon name="expand" *ngIf="contact.IsOnline"></ion-icon>
+    <ion-grid>
+      <ion-row *ngFor="let contact of contacts" class="margin-top-5">
+        <ion-col *ngIf="contact.photoAsDataUrl" width-20 center>
+          <img class="img-round" width="55px" height="55px" [src]="contact.photoAsDataUrl" />
+        </ion-col>
+        <ion-col>
+          <div>
+            <p>{{ contact.FirstName }}</p>
+            <p style="font-size: 10px; margin-top: -14px" *ngIf="!contact.IsOnline">(<span color="danger">offline</span>)</p>
+            <p style="font-size: 10px; margin-top: -14px" *ngIf="contact.IsOnline">(<span color="secondary">online</span>)</p>
+            <p style="font-size: 11px; margin-top: -5px">{{ contact.Phone.Number }}</p>
+          </div>
+        </ion-col>
+        <ion-col center>
+          <div>
+            <!--[disabled]="!contact.IsOnline"-->
+            <button ion-button small outline class="button button-positive button-width-100" (click)="openActionSheet(contact)">
+                  <span>share &nbsp;&nbsp;&nbsp;&nbsp;</span>
+                  <ion-icon name="expand"></ion-icon>
               </button>
-            </div>
-          </ion-col>
-        </ion-row>
-        <ion-row>
-          <ion-col class="top-80">
-            <hr width="75%" />
-          </ion-col>
-        </ion-row>
-      </ion-item>
-    </ion-list>
+          </div>
+        </ion-col>
+        <hr class="hr-col" />
+      </ion-row>
+    </ion-grid>
+    <ion-fab right bottom>
+      <button ion-fab color="favorite" (click)="openShareActions()"><span>Share link</span></button>
+      <!--<ion-fab-list side="top">
+        <button ion-fab (click)="shareLinkByMail()"><span style="font-size: 11px">email</span></button>
+        <button ion-fab (click)="shareLinkBySms()"><span style="font-size: 11px">SMS</span></button>
+      </ion-fab-list>-->
+    </ion-fab>
   </div>
 </ion-content>

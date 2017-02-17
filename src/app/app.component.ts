@@ -1,3 +1,4 @@
+import { ViewChild, Component, NgZone } from "@angular/core";
 import { Platform, AlertController, MenuController, Alert, LoadingController } from "ionic-angular";
 import {
   Diagnostic,
@@ -11,12 +12,12 @@ import {
   Network,
   Toast
 } from "ionic-native";
-import { ViewChild, Component, NgZone } from "@angular/core";
 
 import { localDeviceSettings } from "../services/localDeviceSettings";
 import { RegistrationComponent } from "../pages/registration/register.component";
 import { ContactsComponent } from "../pages/contacts/contacts.component";
 import { ServerHostManager } from "../services/serverHostManager";
+import { PushNotificationService, PushNotification } from "../services/push-notification.service";
 
 declare var navigator: any;
 
@@ -38,6 +39,7 @@ export class MyApp {
     private menu: MenuController,
     private serverHost: ServerHostManager,
     private loading: LoadingController,
+    private pushService: PushNotificationService,
     private alertController: AlertController) {
 
     platform.ready().then(() => {
@@ -55,7 +57,8 @@ export class MyApp {
           this.configBackgroundMode();
           this.configBackButton();
           this.configLogListener();
-          this.configureNetworkListener();
+          this.configNetworkListener();
+          this.configPushNotifyService();
         }
       });
     });
@@ -118,6 +121,7 @@ export class MyApp {
           }
         }]
       });
+      this.exitAlert.onDidDismiss(() => this.exitAlert = null);
       this.exitAlert.present();
     }, 100);
   }
@@ -149,6 +153,7 @@ export class MyApp {
     }
     else if (this.localSettings.isNewVersionAvailable()) {
       this.localSettings.setCurrentUser(null);
+      this.localSettings.deleteCurrentDB();
     }
 
     const user = this.localSettings.getUser();
@@ -209,7 +214,7 @@ export class MyApp {
       .catch(error => alert(`BackgroundGeolocation.isLocationEnabled error: ${error}`));
   }
 
-  private configureNetworkListener() {
+  private configNetworkListener() {
     let timeInterval;
 
     this.hasInternet = Network.type !== "offline";
@@ -227,13 +232,20 @@ export class MyApp {
   }
 
   private configBackgroundMode() {
-    // if (!BackgroundMode.isEnabled()) {
-    //   BackgroundMode.setDefaults({
-    //     title: "TrackMyWay title",
-    //     ticker: "TrackMyWay is now running in background mode",
-    //     text: "TrackMyWay text"
-    //   });
-    //   BackgroundMode.enable();
-    // }
+    if (!BackgroundMode.isEnabled()) {
+      BackgroundMode.setDefaults({
+        title: "TrackMyWay title",
+        ticker: "TrackMyWay is now running in background mode",
+        text: "TrackMyWay text",
+        silent: true
+      });
+      BackgroundMode.enable();
+    }
+  }
+
+  private configPushNotifyService() {
+    //this.nav.push(MapComponent, { contact: data.payload.additionalData.targetUser })
+    const pushOptions = new PushNotification();
+    this.pushService.register(pushOptions);
   }
 }

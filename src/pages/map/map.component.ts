@@ -3,6 +3,7 @@ import { NavController, NavParams, ViewController, Platform } from 'ionic-angula
 import { BackgroundGeolocation, Geolocation, Network } from 'ionic-native';
 
 import { ServerHostManager } from "../../services/serverHostManager";
+import { localDeviceSettings } from "../../services/localDeviceSettings";
 
 declare var plugin: any;
 declare var navigator: any;
@@ -10,6 +11,8 @@ declare var navigator: any;
 @Component({ templateUrl: "map.html" })
 export class MapComponent implements OnInit {
   private contact;
+  private key;
+  private sendOnlyPosition = false;
   private map;
   private isResponseWaiting = true;
   private watchPositionHandler;
@@ -24,23 +27,30 @@ export class MapComponent implements OnInit {
   private clearUserDisconnect;
   private lastReportedLat;
   private lastReportedLong;
+  private userCountRemove;
+  private observableCount = 0;
+  private clearUserTrackTracking;
+  private clearPositionRecieved;
 
   @ViewChild("mapHost") mapHost;
   @ViewChild("bntZoomIn") bntZoomIn;
 
   constructor(
     private params: NavParams,
+    private settings: localDeviceSettings,
     private viewCtrl: ViewController,
     private serverHost: ServerHostManager,
     private nav: NavController,
     private platform: Platform) {
 
     this.contact = params.get("contact");
+    this.key = params.get("key");
+
+    this.sendOnlyPosition = this.key !== undefined;
   }
 
   ngOnInit() {
-    this.clearUserDisconnect = this.serverHost.onUserDisconnect(this.onUserDisconnect.bind(this));
-    this.serverHost.onStopUserTrackRecieved(this.onUserDisconnect.bind(this));
+    this.clearUserTrackTracking = this.serverHost.onStopUserTrackRecieved(this.onUserDisconnect.bind(this));
 
     this.loadGoogleMap();
     this.configBackButton();
@@ -48,6 +58,11 @@ export class MapComponent implements OnInit {
     this.configPlatformResume();
 
     Network.onConnect().subscribe(() => this.serverHost.emitLoginUser());
+
+    if (this.sendOnlyPosition)
+      this.userCountRemove = this.serverHost.addUserCountListener(count => this.observableCount = count);
+    else
+      this.clearUserDisconnect = this.serverHost.onUserDisconnect(this.onUserDisconnect.bind(this));
   }
 
   ngOnDestroy() {
@@ -107,55 +122,23 @@ export class MapComponent implements OnInit {
 
     this.watchPositionHandler = Geolocation.watchPosition({ timeout: 60000, enableHighAccuracy: false })
       .subscribe((result: any) => {
-        if (result.coords)
+        if (result.coords) {
           this.positionChanged(result.coords.latitude, result.coords.longitude);
+          if (this.sendOnlyPosition) {
+            this.map.clear();
+            this.map.addMarker({
+              position: new plugin.google.maps.LatLng(result.coords.latitude, result.coords.longitude),
+              title: this.observableCount === 1 ? '1 user is watching your location' : `${this.observableCount} users are watching your location`,
+            }, marker => marker.showInfoWindow());
+            this.moveCameraMap(result.coords.latitude, result.coords.longitude);
+          }
+        }
         else
           alert(`There was a problem retrieving your Geolocation.  Try to restart your location service. ${result.message}`);
       });
 
-    this.serverHost.onPositionRecieved(position => {
-      const _position = position.Geopoint.Position;
-      const pos = new plugin.google.maps.LatLng(_position.Latitude, _position.Longitude);
-
-      this.lastLat = _position.Latitude;
-      this.lastLong = _position.Longitude;
-
-      if (this.isPaused) {
-        return;
-      }
-
-      if (!this.isMapDragged)
-        this.moveCameraMap(this.lastLat, this.lastLong);
-
-      this.map.clear();
-      if (this.userAvatar) {
-        this.map.addMarker({
-          position: pos,
-          styles: { "maxWidth": "80%", "text-align": "center" },
-          title: this.contact.FirstName,
-          icon: this.userAvatar
-        }, marker => marker.showInfoWindow());
-
-        this.map.addMarker({
-          position: new plugin.google.maps.LatLng(this.lastReportedLat, this.lastReportedLong),
-          styles: { "maxWidth": "80%", "text-align": "center" },
-          title: "Me",
-        }, marker => marker.showInfoWindow());
-      }
-      else
-        this.getUserImage().then(icon => {
-          this.userAvatar = icon;
-          this.map.addMarker({
-            position: pos,
-            styles: {
-              "maxWidth": "80%",
-              "text-align": "center"
-            },
-            title: this.contact.FirstName,
-            icon: icon
-          }, marker => marker.showInfoWindow());
-        });
-    });
+    if (!this.sendOnlyPosition)
+      this.clearPositionRecieved = this.serverHost.onPositionRecieved(position => this.onPositionRecieved(position.Geopoint.Position));
   }
 
   private configBackgroundLocation() {
@@ -166,7 +149,7 @@ export class MapComponent implements OnInit {
 
     const failureFn = error => { console.log('BackgroundGeolocation error'); };
 
-    BackgroundGeolocation.configure(callbackFn, failureFn, {
+    BackgroundGeolocation.configure({
       desiredAccuracy: 1,
       stationaryRadius: 1,
       distanceFilter: 10,
@@ -223,6 +206,49 @@ export class MapComponent implements OnInit {
     this.map.moveCamera(cameraSettings);
   }
 
+  private onPositionRecieved(position) {
+    const pos = new plugin.google.maps.LatLng(position.Latitude, position.Longitude);
+
+    this.lastLat = position.Latitude;
+    this.lastLong = position.Longitude;
+
+    if (this.isPaused) {
+      return;
+    }
+
+    if (!this.isMapDragged)
+      this.moveCameraMap(this.lastLat, this.lastLong);
+
+    this.map.clear();
+    if (this.userAvatar) {
+      this.map.addMarker({
+        position: pos,
+        styles: { "maxWidth": "80%", "text-align": "center" },
+        title: this.contact.FirstName,
+        icon: this.userAvatar
+      }, marker => marker.showInfoWindow());
+
+      this.map.addMarker({
+        position: new plugin.google.maps.LatLng(this.lastReportedLat, this.lastReportedLong),
+        styles: { "maxWidth": "80%", "text-align": "center" },
+        title: "Me",
+      }, marker => marker.showInfoWindow());
+    }
+    else
+      this.getUserImage().then(icon => {
+        this.userAvatar = icon;
+        this.map.addMarker({
+          position: pos,
+          styles: {
+            "maxWidth": "80%",
+            "text-align": "center"
+          },
+          title: this.contact.FirstName,
+          icon: icon
+        }, marker => marker.showInfoWindow());
+      });
+  }
+
   private positionChanged(latitude, longitude) {
     if (this.lastReportedLat !== latitude.toFixed(3) || this.lastReportedLong !== longitude.toFixed(3) || true) {
       this.lastReportedLat = latitude.toFixed(3);
@@ -232,7 +258,8 @@ export class MapComponent implements OnInit {
       const user = Object.assign({}, this.contact);
       delete user.photoAsDataUrl;
       delete user.photo;
-      this.serverHost.sendPosition([user], payload);
+
+      this.serverHost.sendPosition([this.sendOnlyPosition ? this.settings.getUser() : user], payload, this.key);
     }
   }
 
@@ -273,8 +300,7 @@ export class MapComponent implements OnInit {
       return;
 
     this.isDisposed = true;
-    this.serverHost.removeStopUserTrackRecieved();
-    this.clearUserDisconnect();
+    this.clearUserTrackTracking();
 
     if (this.map)
       this.map.remove();
@@ -284,11 +310,20 @@ export class MapComponent implements OnInit {
 
     this.backButtonHandler();
 
-    const user = Object.assign({}, this.contact);
-    delete user.photoAsDataUrl;
-    delete user.photo;
+    if (this.sendOnlyPosition) {
 
-    this.serverHost.disconnectPositionRecieved();
-    this.serverHost.stopTracking(user);
+      this.userCountRemove();
+      const currentUser = this.settings.getUser();
+      currentUser["tracked-room"] = this.key;
+      this.serverHost.stopTracking(currentUser);
+    } else {
+      this.clearUserDisconnect();
+      this.clearPositionRecieved();
+
+      const user = Object.assign({}, this.contact);
+      delete user.photoAsDataUrl;
+      delete user.photo;
+      this.serverHost.stopTracking(this.contact);
+    }
   }
 }

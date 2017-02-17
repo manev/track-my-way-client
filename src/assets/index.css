@@ -83,20 +83,20 @@ input {
     margin-top: 5px;
 }
 
-.top-80 {
-    top: 80px;
-    margin-left: 15px;
-    position: absolute;
+.hr-col {
+    margin: 0 20px;
+    margin-top: auto;
+    width: 100%;
 }
 
-.margin-top-minus-5 {
-    margin-top: -5px;
+.margin-top-5 {
+    margin-top: 5px;
 }
 
 .button-width-100 {
     width: 100px !important;
     border-radius: 0 !important;
-    margin-left: 55px;
+    float: right;
 }
 
 .select {

@@ -1,6 +1,5 @@
 import { Injectable } from "@angular/core";
-import { Observable } from "rxjs/Observable";
-import { Observer } from "rxjs/Observer";
+import { Observable, Observer } from 'rxjs/Rx';
 import 'rxjs/add/operator/share';
 
 import { localDeviceSettings } from "./localDeviceSettings";
@@ -14,8 +13,11 @@ export class ServerHostManager {
   private socket;
   private usersObservable: Observable<Array<User>>;
 
+  public webUrl = Object.freeze("http://web-kokata.rhcloud.com");
+
   constructor(private settings: localDeviceSettings) {
-    //this.liveUrl = "ws://192.168.1.104:8081";
+    // this.liveUrl = "ws://192.168.1.102:8081";
+    // this.webUrl = "http://localhost:4200";
     this.socket = io(this.liveUrl, {
       reconnection: true,
       reconnectionDelay: 1000,
@@ -58,14 +60,11 @@ export class ServerHostManager {
       });
       this.usersObservable = new Observable<Array<User>>(observer => _observer = observer).share();
     }
-    this.emitLoginUser();
-
     return this.usersObservable;
   }
 
-  registerUser() {
-    const user = this.settings.getUser();
-    this.emit("add-user-event", user);
+  registerUser(user, callback) {
+    this.emit("add-user-event", user, callback);
   }
 
   addTrackingListener(callback) {
@@ -101,20 +100,17 @@ export class ServerHostManager {
     this.emit("request-user-track", JSON.stringify(user));
   }
 
-  onPositionRecieved(callback) {
+  onPositionRecieved(callback): Function {
     this.on("send-position-event", param => {
       let args = JSON.parse(param);
       callback(args);
     });
+    return () => this.socket.off("send-position-event");
   }
 
-  disconnectPositionRecieved() {
-    this.socket.off("send-position-event");
-  }
-
-  sendPosition(receivers, position) {
+  sendPosition(receivers, position, key) {
     receivers.forEach(r => {
-      this.socket.emit("send-position-event", JSON.stringify(r), JSON.stringify(position));
+      this.socket.emit("send-position-event", JSON.stringify(r), JSON.stringify(position), key);
     });
   }
 
@@ -122,10 +118,7 @@ export class ServerHostManager {
     this.on("stop-user-tracking", user => {
       callback(JSON.parse(user));
     });
-  }
-
-  removeStopUserTrackRecieved() {
-    this.socket.off("stop-user-tracking");
+    return () => this.socket.off("stop-user-tracking");
   }
 
   stopTracking(user) {
@@ -146,13 +139,16 @@ export class ServerHostManager {
     }
   }
 
-  emitPushRegKey(key: string) {
-    let user = this.settings.getUser();
-    this.emit("user-registration-key", { phoneNumber: user.Phone.Number, key: key });
+  addUserCountListener(callBack: Function) {
+    this.on("active-web-user-in-session", callBack);
+
+    return () => this.socket.off("active-web-user-in-session");
   }
 
-  push(contact) {
-    this.emit("sender-user-push", JSON.stringify(contact));
+  push(data, callback: Function) {
+    this.emit("sender-user-push", JSON.stringify(data), args => {
+      callback(args);
+    });
   }
 
   private ensureSocketConnection() {
@@ -165,11 +161,21 @@ export class ServerHostManager {
     this.socket.on(event, callback);
   }
 
-  private emit(event, payload = null) {
+  private emit(event, payload = null, callback: Function = () => { }) {
     this.ensureSocketConnection();
     if (payload)
-      this.socket.emit(event, typeof payload === "object" ? JSON.stringify(payload) : payload);
+      this.socket.emit(event, typeof payload === "object" ? JSON.stringify(payload) : payload, data => {
+        if (data)
+          typeof data === "object" ? callback(data) : callback(JSON.parse(data));
+        else
+          callback();
+      });
     else
-      this.socket.emit(event);
+      this.socket.emit(event, data => {
+        if (data)
+          callback(JSON.parse(data));
+        else
+          callback();
+      });
   }
 }
