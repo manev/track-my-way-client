@@ -1,12 +1,14 @@
 import { OnInit, Component, ViewChild } from "@angular/core";
 import { NavController, NavParams, ViewController, Platform } from 'ionic-angular';
-import { BackgroundGeolocation, Geolocation, Network } from 'ionic-native';
+import { Geolocation, Network } from 'ionic-native';
 
 import { ServerHostManager } from "../../services/serverHostManager";
 import { localDeviceSettings } from "../../services/localDeviceSettings";
 
 declare var plugin: any;
 declare var navigator: any;
+
+const fixedPosition = 4;
 
 @Component({ templateUrl: "map.html" })
 export class MapComponent implements OnInit {
@@ -141,27 +143,6 @@ export class MapComponent implements OnInit {
       this.clearPositionRecieved = this.serverHost.onPositionRecieved(position => this.onPositionRecieved(position.Geopoint.Position));
   }
 
-  private configBackgroundLocation() {
-    const callbackFn = location => {
-      this.positionChanged(location.latitude, location.longitude);
-      BackgroundGeolocation.finish();
-    };
-
-    const failureFn = error => { console.log('BackgroundGeolocation error'); };
-
-    BackgroundGeolocation.configure({
-      desiredAccuracy: 1,
-      stationaryRadius: 1,
-      distanceFilter: 10,
-      interval: 600,
-      stopOnTerminate: true,
-      locationProvider: BackgroundGeolocation.LocationProvider.ANDROID_ACTIVITY_PROVIDER
-    });
-
-    // Turn ON the background-geolocation system. The user will be tracked whenever they suspend the app.
-    BackgroundGeolocation.start();
-  }
-
   private getUserImage(): Promise<string> {
     const executor = (resolve) => {
       const canvas = document.createElement("canvas");
@@ -250,9 +231,9 @@ export class MapComponent implements OnInit {
   }
 
   private positionChanged(latitude, longitude) {
-    if (this.lastReportedLat !== latitude.toFixed(3) || this.lastReportedLong !== longitude.toFixed(3) || true) {
-      this.lastReportedLat = latitude.toFixed(3);
-      this.lastReportedLong = longitude.toFixed(3);
+    if (this.lastReportedLat !== latitude.toFixed(fixedPosition) || this.lastReportedLong !== longitude.toFixed(fixedPosition) || true) {
+      this.lastReportedLat = latitude.toFixed(fixedPosition);
+      this.lastReportedLong = longitude.toFixed(fixedPosition);
 
       let payload = { Geopoint: { Position: { Latitude: latitude, Longitude: longitude } } };
       const user = Object.assign({}, this.contact);
