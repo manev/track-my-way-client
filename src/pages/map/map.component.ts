@@ -1,9 +1,11 @@
 import { OnInit, Component, ViewChild } from "@angular/core";
 import { NavController, NavParams, ViewController, Platform } from 'ionic-angular';
-import { Geolocation, Network } from 'ionic-native';
+
+import { Network } from '@ionic-native/network';
+import { Geolocation } from '@ionic-native/geolocation';
 
 import { ServerHostManager } from "../../services/serverHostManager";
-import { localDeviceSettings } from "../../services/localDeviceSettings";
+import { LocalDeviceSettings } from "../../services/localDeviceSettings";
 
 declare var plugin: any;
 declare var navigator: any;
@@ -38,8 +40,10 @@ export class MapComponent implements OnInit {
   @ViewChild("bntZoomIn") bntZoomIn;
 
   constructor(
+    private network: Network,
+    private geolocation: Geolocation,
     private params: NavParams,
-    private settings: localDeviceSettings,
+    private settings: LocalDeviceSettings,
     private viewCtrl: ViewController,
     private serverHost: ServerHostManager,
     private nav: NavController,
@@ -59,7 +63,7 @@ export class MapComponent implements OnInit {
     this.configPlatformPause();
     this.configPlatformResume();
 
-    Network.onConnect().subscribe(() => this.serverHost.emitLoginUser());
+    this.network.onConnect().subscribe(() => this.serverHost.emitLoginUser());
 
     if (this.sendOnlyPosition)
       this.userCountRemove = this.serverHost.addUserCountListener(count => this.observableCount = count);
@@ -122,11 +126,11 @@ export class MapComponent implements OnInit {
       //this.configBackgroundLocation();
     });
 
-    this.watchPositionHandler = Geolocation.watchPosition({ timeout: 60000, enableHighAccuracy: false })
+    this.watchPositionHandler = this.geolocation.watchPosition({ timeout: 10000, enableHighAccuracy: false })
       .subscribe((result: any) => {
         if (result.coords) {
           this.positionChanged(result.coords.latitude, result.coords.longitude);
-          if (this.sendOnlyPosition) {
+          if (this.sendOnlyPosition) {``
             this.map.clear();
             this.map.addMarker({
               position: new plugin.google.maps.LatLng(result.coords.latitude, result.coords.longitude),
@@ -231,7 +235,7 @@ export class MapComponent implements OnInit {
   }
 
   private positionChanged(latitude, longitude) {
-    if (this.lastReportedLat !== latitude.toFixed(fixedPosition) || this.lastReportedLong !== longitude.toFixed(fixedPosition) || true) {
+    if (this.lastReportedLat !== latitude.toFixed(fixedPosition) || this.lastReportedLong !== longitude.toFixed(fixedPosition)) {
       this.lastReportedLat = latitude.toFixed(fixedPosition);
       this.lastReportedLong = longitude.toFixed(fixedPosition);
 

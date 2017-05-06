@@ -2,7 +2,7 @@ import { Injectable } from "@angular/core";
 import { Observable, Observer } from 'rxjs/Rx';
 import 'rxjs/add/operator/share';
 
-import { localDeviceSettings } from "./localDeviceSettings";
+import { LocalDeviceSettings } from "./localDeviceSettings";
 import { User } from "./user";
 
 declare var io: any;
@@ -15,7 +15,7 @@ export class ServerHostManager {
 
   public webUrl = Object.freeze("http://web-kokata.rhcloud.com");
 
-  constructor(private settings: localDeviceSettings) {
+  constructor(private settings: LocalDeviceSettings) {
     // this.liveUrl = "ws://192.168.1.102:8081";
     // this.webUrl = "http://localhost:4200";
     this.socket = io(this.liveUrl, {

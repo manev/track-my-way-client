@@ -2,9 +2,12 @@ import { LoadingDialogService } from './../../services/loading.service';
 import { OnInit, Component, ViewChild } from "@angular/core";
 import { Http } from "@angular/http";
 import { NavController } from 'ionic-angular';
-import { Keyboard, Geolocation } from "ionic-native";
+
+import { Geolocation } from '@ionic-native/geolocation';
+import { Keyboard } from '@ionic-native/keyboard';
+
 import { ServerHostManager } from "../../services/serverHostManager";
-import { localDeviceSettings } from "../../services/localDeviceSettings";
+import { LocalDeviceSettings } from "../../services/localDeviceSettings";
 import Util from "../../services/util";
 import { User } from "../../services/user";
 import { ContactsComponent } from "../contacts/contacts.component";
@@ -23,15 +26,17 @@ export class RegistrationComponent implements OnInit {
 
   constructor(
     private serverHost: ServerHostManager,
-    private settings: localDeviceSettings,
+    private settings: LocalDeviceSettings,
     private http: Http,
+    private keyboard: Keyboard,
+    private geolocation: Geolocation,
     private loadingDialog: LoadingDialogService,
     private pushService: PushNotificationService,
     private nav: NavController) { }
 
   ngOnInit() {
     this.isLoading = true;
-    Geolocation.getCurrentPosition()
+    this.geolocation.getCurrentPosition()
       .then(pos => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
@@ -86,7 +91,7 @@ export class RegistrationComponent implements OnInit {
   private setNameInputFocus() {
     setTimeout(() => {
       this.nameInput.setFocus();
-      Keyboard.show();
+      this.keyboard.show();
     }, 150);
   }
 }

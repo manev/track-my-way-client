@@ -1,19 +1,18 @@
 import { ViewChild, Component, NgZone } from "@angular/core";
 import { Platform, AlertController, MenuController, Alert, LoadingController } from "ionic-angular";
-import {
-  Diagnostic,
-  StatusBar,
-  Device,
-  Insomnia,
-  Splashscreen,
-  BackgroundMode,
-  LocationAccuracy,
-  BackgroundGeolocation,
-  Network,
-  Toast
-} from "ionic-native";
 
-import { localDeviceSettings } from "../services/localDeviceSettings";
+import { Diagnostic } from "@ionic-native/diagnostic";
+import { BackgroundGeolocation } from '@ionic-native/background-geolocation';
+import { Device } from '@ionic-native/device';
+import { LocationAccuracy } from '@ionic-native/location-accuracy';
+import { BackgroundMode } from '@ionic-native/background-mode';
+import { Network } from '@ionic-native/network';
+import { Toast } from '@ionic-native/toast';
+import { Insomnia } from '@ionic-native/insomnia';
+import { StatusBar } from '@ionic-native/status-bar';
+import { SplashScreen } from '@ionic-native/splash-screen';
+
+import { LocalDeviceSettings } from "../services/localDeviceSettings";
 import { RegistrationComponent } from "../pages/registration/register.component";
 import { ContactsComponent } from "../pages/contacts/contacts.component";
 import { ServerHostManager } from "../services/serverHostManager";
@@ -35,18 +34,28 @@ export class MyApp {
   constructor(
     private platform: Platform,
     private zone: NgZone,
-    private localSettings: localDeviceSettings,
+    private localSettings: LocalDeviceSettings,
     private menu: MenuController,
     private serverHost: ServerHostManager,
     private loading: LoadingController,
     private pushService: PushNotificationService,
-    private alertController: AlertController) {
+    private alertController: AlertController,
+    private network: Network,
+    private toast: Toast,
+    private insomnia: Insomnia,
+    private statusBar: StatusBar,
+    private splashScreen: SplashScreen,
+    private locationAccuracy: LocationAccuracy,
+    private backgroundGeolocation: BackgroundGeolocation,
+    private backgroundMode: BackgroundMode,
+    private device: Device,
+    private diagnostic: Diagnostic) {
 
     platform.ready().then(() => {
-      StatusBar.styleDefault();
-      Splashscreen.hide();
+      this.statusBar.styleDefault();
+      this.splashScreen.hide();
 
-      Diagnostic.requestContactsAuthorization().then(args => {
+      this.diagnostic.requestContactsAuthorization().then(args => {
         if (args === "DENIED") {
           this.platform.exitApp();
         } else {
@@ -90,10 +99,10 @@ export class MyApp {
   }
 
   private requestLocationAccuracy() {
-    LocationAccuracy.canRequest().then(
+    this.locationAccuracy.canRequest().then(
       value => {
         if (value)
-          LocationAccuracy.request(LocationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY).then(
+          this.locationAccuracy.request(this.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY).then(
             () => this.bootstrapp(),
             () => this.configLocationService()
           );
@@ -129,7 +138,7 @@ export class MyApp {
   private configResume() {
     this.platform.resume.subscribe(() => {
       if (this.alertLocation) {
-        BackgroundGeolocation.isLocationEnabled()
+        this.backgroundGeolocation.isLocationEnabled()
           .then(value => {
             if (value) {
               this.alertLocation.dismiss();
@@ -142,13 +151,13 @@ export class MyApp {
   }
 
   private configInsomnia() {
-    Insomnia.keepAwake()
+    this.insomnia.keepAwake()
       .then(() => console.log("Succeeded running insomnia"))
       .catch(error => alert(`Insomna error: ${error}`));
   }
 
   private bootstrapp() {
-    if (Device.serial === "320496b4274211a1") {
+    if (this.device.serial === "320496b4274211a1") {
       this.localSettings.setMockedUser();
     }
     else if (this.localSettings.isNewVersionAvailable()) {
@@ -180,11 +189,11 @@ export class MyApp {
   }
 
   private configLocationService() {
-    Diagnostic.requestLocationAuthorization().then(result => {
+    this.diagnostic.requestLocationAuthorization().then(result => {
       console.log(result);
     });
 
-    BackgroundGeolocation.isLocationEnabled()
+    this.backgroundGeolocation.isLocationEnabled()
       .then(value => {
         if (value === 0) {
           this.alertLocation = this.alertController.create({
@@ -196,12 +205,12 @@ export class MyApp {
             },
             {
               text: "GO TO SETTINGS",
-              handler: () => BackgroundGeolocation.showLocationSettings()
+              handler: () => this.backgroundGeolocation.showLocationSettings()
             }]
           });
           this.alertLocation.present();
 
-          BackgroundGeolocation.watchLocationMode()
+          this.backgroundGeolocation.watchLocationMode()
             .then(_value => {
               if (_value) {
                 this.bootstrapp();
@@ -217,29 +226,29 @@ export class MyApp {
   private configNetworkListener() {
     let timeInterval;
 
-    this.hasInternet = Network.type !== "offline";
+    this.hasInternet = this.network.type !== "offline";
 
-    Network.onDisconnect().subscribe(() => {
+    this.network.onDisconnect().subscribe(() => {
       this.zone.run(() => this.hasInternet = false);
-      timeInterval = setInterval(() => Toast.showShortCenter("No internet connection!").subscribe(), 500);
+      timeInterval = setInterval(() => this.toast.showShortCenter("No internet connection!").subscribe(), 500);
     });
 
-    Network.onConnect().subscribe(() => {
+    this.network.onConnect().subscribe(() => {
       this.zone.run(() => this.hasInternet = true);
-      Toast.hide();
+      this.toast.hide();
       clearInterval(timeInterval);
     });
   }
 
   private configBackgroundMode() {
-    if (!BackgroundMode.isEnabled()) {
-      BackgroundMode.setDefaults({
+    if (!this.backgroundMode.isEnabled()) {
+      this.backgroundMode.setDefaults({
         title: "TrackMyWay title",
         ticker: "TrackMyWay is now running in background mode",
         text: "TrackMyWay text",
         silent: true
       });
-      BackgroundMode.enable();
+      this.backgroundMode.enable();
     }
   }
 

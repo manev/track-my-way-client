@@ -1,10 +1,15 @@
 import { Component } from "@angular/core";
 
 import { NavController, AlertController, ActionSheetController, Loading, Platform, ActionSheet } from 'ionic-angular';
-import { Contacts, Device, SMS, EmailComposer, Geolocation } from "ionic-native";
+
+import { Contacts } from '@ionic-native/contacts';
+import { Device } from '@ionic-native/device';
+import { Geolocation } from '@ionic-native/geolocation';
+import { SMS } from '@ionic-native/sms';
+import { EmailComposer } from '@ionic-native/email-composer';
 
 import { ServerHostManager } from "../../services/serverHostManager";
-import { localDeviceSettings } from "../../services/localDeviceSettings";
+import { LocalDeviceSettings } from "../../services/localDeviceSettings";
 import Util from "../../services/util";
 import { User, Tel } from "../../services/user";
 import { MapComponent } from "../map/map.component";
@@ -17,10 +22,15 @@ declare let cordova;
 @Component({ templateUrl: "contacts.html" })
 export class ContactsComponent {
   constructor(
+    private contactsService: Contacts,
+    private device: Device,
+    private geolocation: Geolocation,
     private serverHost: ServerHostManager,
-    private settings: localDeviceSettings,
+    private settings: LocalDeviceSettings,
     private nav: NavController,
     private platform: Platform,
+    private sms: SMS,
+    private emailComposer: EmailComposer,
     private actionSheet: ActionSheetController,
     private loadingService: LoadingDialogService,
     private alert: AlertController) {
@@ -106,7 +116,7 @@ export class ContactsComponent {
       });
     });
 
-    if (Device.serial === "320496b4274211a1")
+    if (this.device.serial === "320496b4274211a1")
       this.setupMockUser();
     else
       this.loadContacts();
@@ -116,11 +126,11 @@ export class ContactsComponent {
     if (isRealTime) {
       const args = this.getSharedUrl();
       const email = { subject: `Shared link`, body: args.url, isHtml: true };
-      EmailComposer.open(email).then(() => this.nav.push(MapComponent, { key: args.key }));
+      this.emailComposer.open(email).then(() => this.nav.push(MapComponent, { key: args.key }));
     } else
-      Geolocation.getCurrentPosition({ enableHighAccuracy: true }).then(location => {
+      this.geolocation.getCurrentPosition({ enableHighAccuracy: true }).then(location => {
         const email = { subject: `Shared link`, body: this.getCurrentLocationUrl(location), isHtml: true };
-        EmailComposer.open(email);
+        this.emailComposer.open(email);
       });
   }
 
@@ -128,11 +138,11 @@ export class ContactsComponent {
     if (!contact) return;
 
     if (isRealTime) {
-      SMS.send(contact.Phone.Number, this.getSharedUrl().url);
+      this.sms.send(contact.Phone.Number, this.getSharedUrl().url);
     }
     else
-      Geolocation.getCurrentPosition({ enableHighAccuracy: true }).then(location => {
-        SMS.send(contact.Phone.Number, this.getCurrentLocationUrl(location));
+      this.geolocation.getCurrentPosition({ enableHighAccuracy: true }).then(location => {
+        this.sms.send(contact.Phone.Number, this.getCurrentLocationUrl(location));
       });
   }
 
@@ -265,7 +275,7 @@ export class ContactsComponent {
           c.IsOnline = c.Phone.Number === user.Phone.Number ? user.IsOnline : c.IsOnline
         ));
 
-        Contacts.find(this.fields, { multiple: true, desiredFields: this.fields, hasPhoneNumber: true })
+        this.contactsService.find(this.fields, { multiple: true, desiredFields: this.fields, hasPhoneNumber: true })
           .then(deviceContacts => {
             const currentUser = this.settings.getUser();
             const validUsers = users.filter(user => currentUser.Phone.Number !== user.Phone.Number && !this.contacts.find(c => c.Phone.Number === user.Phone.Number));
@@ -308,7 +318,7 @@ export class ContactsComponent {
     let isServerContactsLoaded = false;
 
     const loading = this.loadingService.showLoading("Syncing Contacts...");
-    Contacts.find(this.fields, { multiple: true, desiredFields: this.fields, hasPhoneNumber: true })
+    this.contactsService.find(this.fields, { multiple: true, desiredFields: this.fields, hasPhoneNumber: true })
       .then(contacts => {
         deviceContacts = contacts;
         isDeviceContactsLoaded = true;
@@ -386,7 +396,7 @@ export class ContactsComponent {
             const country = Util.GetCountryByCode(contact.CountryCode);
             if (contact.Phone.Number.startsWith(country.countryCallingCodes[0]))
               num = contact.Phone.Number.replace(country.countryCallingCodes[0], 0);
-            Contacts.find(this.fields, { filter: num }).then(args => {
+            this.contactsService.find(this.fields, { filter: num }).then(args => {
               if (args.length > 0) {
                 contact.photo = args[0].photos[0].value;
                 this.loadContactAvatar(contact).then(() => {

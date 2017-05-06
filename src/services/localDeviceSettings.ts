@@ -1,18 +1,16 @@
 import { Injectable } from "@angular/core";
-import { SQLite } from "ionic-native";
+import { SQLite, SQLiteObject } from '@ionic-native/sqlite';
 import { User, Tel } from "./user";
 
 @Injectable()
-export class localDeviceSettings {
+export class LocalDeviceSettings {
   public api_ley = "AIzaSyAew8rDZygmnQ1aHPKgNG1UaBOqW02HAfs";
 
   private currentVersion = 3.22;
   private userKey = "current-user-key";
   private versionKey = "current-version-key";
-  private db: SQLite;
 
-  constructor() {
-    this.db = new SQLite();
+  constructor(private sqlite: SQLite) {
   }
 
   setMockedUser(): void {
@@ -39,12 +37,12 @@ export class localDeviceSettings {
   }
 
   saveUserContacts(deviceContacts: any[]) {
-    this.executeInSql().then(args => {
-      this.db.transaction(tx => {
+    this.executeInSql().then(sqlObject => {
+      sqlObject.transaction(tx => {
         tx.executeSql("DROP TABLE IF EXISTS contacts", [], args => {
           tx.executeSql("CREATE TABLE IF NOT EXISTS contacts (number, kind, description, countrycode, firstname, photo, pushId)", [], args => {
             deviceContacts.forEach(contact => {
-              this.db.executeSql("INSERT INTO contacts VALUES (?, ?, ?, ?, ?, ?, ?)", [
+              sqlObject.executeSql("INSERT INTO contacts VALUES (?, ?, ?, ?, ?, ?, ?)", [
                 contact.Phone.Number,
                 contact.Phone.Kind,
                 contact.Phone.Description || "",
@@ -59,7 +57,7 @@ export class localDeviceSettings {
             });
           }, error => {
             alert(`SQLite error (saveUserContacts): ${error.message}`);
-            this.db.close();
+            sqlObject.close();
           });
         });
       });
@@ -68,10 +66,10 @@ export class localDeviceSettings {
 
   //SELECT name FROM sqlite_master WHERE type='table' AND name='table_name';
   getAllContacts(): Promise<any[]> {
-    return this.executeInSql().then(args => {
-      return this.db.executeSql("CREATE TABLE IF NOT EXISTS contacts (number, kind, description, countrycode, firstname, photo)", [])
+    return this.executeInSql().then(sqlObject => {
+      return sqlObject.executeSql("CREATE TABLE IF NOT EXISTS contacts (number, kind, description, countrycode, firstname, photo)", [])
         .then(_ => {
-          return this.db.executeSql("SELECT * FROM contacts", []).catch(error => {
+          return sqlObject.executeSql("SELECT * FROM contacts", []).catch(error => {
             alert(`SQLite error (getAllContacts): ${error.message}`);
           });
         });
@@ -79,12 +77,10 @@ export class localDeviceSettings {
   }
 
   deleteCurrentDB() {
-    this.executeInSql().then(_ => this.db.executeSql("DROP TABLE IF EXISTS contacts", []));
+    this.executeInSql().then(sqlObject => sqlObject.executeSql("DROP TABLE IF EXISTS contacts", []));
   }
 
-  private executeInSql(): Promise<any> {
-    return this.db.openDatabase({ name: "TrackMyWay.db", location: "default" }).catch(error => {
-      alert(`SQLite error: ${error}`);
-    });
+  private executeInSql(): Promise<SQLiteObject> {
+    return this.sqlite.create({ name: "TrackMyWay.db", location: "default" }).catch(error => alert(`SQLite error: ${error}`))
   }
 }

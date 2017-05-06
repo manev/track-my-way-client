@@ -1,5 +1,5 @@
-import { Injectable, Injector } from "@angular/core";
-import { OneSignal } from "ionic-native";
+import { Injectable } from "@angular/core";
+import { OneSignal } from '@ionic-native/onesignal';
 
 const appId = "2f7c3177-9126-4fc5-94a4-53187cd2fa43";
 const projNum = "826251723660";
@@ -9,7 +9,7 @@ const emptyFunc = () => { };
 export class PushNotificationService {
   private isRegistered = false;
 
-  constructor(protected injector: Injector) {
+  constructor(private oneSignal: OneSignal) {
   }
 
   register(options: PushNotification = new PushNotification()) {
@@ -18,19 +18,19 @@ export class PushNotificationService {
 
     this.isRegistered = true;
 
-    OneSignal.startInit(appId, projNum);
-    OneSignal.inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification);
+    this.oneSignal.startInit(appId, projNum);
+    this.oneSignal.inFocusDisplaying(this.oneSignal.OSInFocusDisplayOption.Notification);
 
-    OneSignal.handleNotificationReceived().subscribe(data => options.handleNotificationReceived(data));
-    OneSignal.handleNotificationOpened().subscribe(data => options.handleNotificationOpened(data));
-    OneSignal.endInit();
+    this.oneSignal.handleNotificationReceived().subscribe(data => options.handleNotificationReceived(data));
+    this.oneSignal.handleNotificationOpened().subscribe(data => options.handleNotificationOpened(data));
+    this.oneSignal.endInit();
   }
 
   public getIds(): Promise<{ userId: string, pushToken: string }> {
     if (!this.isRegistered)
       this.register();
 
-    return OneSignal.getIds();
+    return this.oneSignal.getIds();
   }
 }
 

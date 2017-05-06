@@ -16,9 +16,7 @@
   "include": [
     "src/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ],
+  "exclude": ["platforms", "node_modules", "bower_components", "plugins", "merges", "res", "bin", "bld"],
   "compileOnSave": false,
   "atom": {
     "rewriteTsconfig": false
